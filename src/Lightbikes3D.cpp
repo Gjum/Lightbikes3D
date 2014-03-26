@@ -1,13 +1,16 @@
 #include <GL/glu.h>
 #include <GLFW/glfw3.h>
-#include <stdlib.h>
-#include <stdio.h>
+#include <cstdlib>
+#include <cstdio>
 #include <vector>
 
+const float mapWidth  = 20;
+const float mapHeight = 20;
 const float bikeRadius = .5;
 const float wallRadius = .1;
 const float defaultBikeSpeed = 7;
 const float wallShrinkSpeed = 3;
+const float viewHeight = 4;
 
 struct Point {
 	float x, z;
@@ -27,6 +30,12 @@ bool viewFromTop = false;
 
 ///// game logic /////
 
+int getBikeID(Bike *bike) {
+	for (int i = 0; i < bikes.size(); i++)
+		if (bikes.at(i) == bike) return i;
+	return -1;
+}
+
 bool isBikeDying(Bike *bike) {
 	return bike->wallHeight < 1;
 }
@@ -35,27 +44,26 @@ bool isBikeDead(Bike *bike) {
 	return bike->wallHeight <= 0;
 }
 
-bool collideBikeWithBike(Bike *bikeA, Bike *bikeB) {
+bool collideBikeWithBike(Bike *bike, Bike *otherBike) {
 	// TODO collideBikeWithBike
 	// TODO print debugging message when colliding bike with itself
 	return false;
 }
 
-bool collideBikeWithWalls(Bike *bikeA, Bike *bikeB) {
-	// TODO variable names... :p
+bool collideBikeWithWalls(Bike *bike, Bike *otherBike) {
 	Point wa, wb;
-	float bw = bikeA->pos.x - bikeRadius; // west
-	float be = bikeA->pos.x + bikeRadius; // east
-	float bn = bikeA->pos.z - bikeRadius; // north
-	float bs = bikeA->pos.z + bikeRadius; // south
-	// do not collide with the two newest walls if bikeA == bikeB
-	if (bikeA == bikeB) {
-		if (bikeB->walls.size() < 3) return false;
-		wa = bikeB->walls.at(bikeB->walls.size() - 2); // start at third-newest wall
+	float bw = bike->pos.x - bikeRadius; // west
+	float be = bike->pos.x + bikeRadius; // east
+	float bn = bike->pos.z - bikeRadius; // north
+	float bs = bike->pos.z + bikeRadius; // south
+	// do not collide with the two newest walls if bike == otherBike
+	if (bike == otherBike) {
+		if (otherBike->walls.size() < 3) return false;
+		wa = otherBike->walls.at(otherBike->walls.size() - 2); // start at third-newest wall
 	}
-	else wa = bikeB->pos;
-	for (int i = bikeB->walls.size() - (bikeA == bikeB ? 3 : 1); i >= 0; i--) {
-		wb = bikeB->walls.at(i);
+	else wa = otherBike->pos;
+	for (int i = otherBike->walls.size() - (bike == otherBike ? 3 : 1); i >= 0; i--) {
+		wb = otherBike->walls.at(i);
 		float ww = ((wa.x < wb.x) ? wa.x : wb.x) - wallRadius; // west
 		float we = ((wa.x > wb.x) ? wa.x : wb.x) + wallRadius; // east
 		float wn = ((wa.z < wb.z) ? wa.z : wb.z) - wallRadius; // north
@@ -64,6 +72,10 @@ bool collideBikeWithWalls(Bike *bikeA, Bike *bikeB) {
 			return true;
 		wa = wb;
 	}
+	return false;
+}
+
+bool collideBikeWithMapBorder(Bike *bike) {
 	return false;
 }
 
@@ -85,6 +97,7 @@ void deleteBike(Bike *bike) {
 
 void killBike(Bike *bike) {
 	if (isBikeDying(bike)) return;
+	printf("Bike %i crashed\n", getBikeID(bike));
 	bike->wallHeight = .99999;
 	// TODO end/restart game if only one left
 	if (bike == ownBike) viewFromTop = true;
@@ -122,26 +135,30 @@ void turnBike(Bike *bike, bool right) {
 
 void collideAllBikes() {
 	for (int i = 0; i < bikes.size(); i++) {
-		Bike *bikeA = bikes.at(i);
-		if (isBikeDead(bikeA)) continue;
+		Bike *bike = bikes.at(i);
+		if (isBikeDying(bike)) continue;
 		// collide with own wall
-		if (collideBikeWithWalls(bikeA, bikeA)) {
-			killBike(bikeA);
+		if (collideBikeWithWalls(bike, bike)) {
+			killBike(bike);
 			continue;
 		}
 		for (int j = i+1; j < bikes.size(); j++) {
-			Bike *bikeB = bikes.at(j);
-			if (isBikeDead(bikeB)) continue;
-			if (collideBikeWithBike(bikeA, bikeB)) {
-				killBike(bikeA);
-				killBike(bikeB);
+			Bike *otherBike = bikes.at(j);
+			if (isBikeDying(otherBike)) continue;
+			if (collideBikeWithBike(bike, otherBike)) {
+				killBike(bike);
+				killBike(otherBike);
 			}
 			else {
-				if (collideBikeWithWalls(bikeA, bikeB))
-					killBike(bikeA);
-				if (collideBikeWithWalls(bikeB, bikeA))
-					killBike(bikeB);
+				if (collideBikeWithWalls(bike, otherBike))
+					killBike(bike);
+				if (collideBikeWithWalls(otherBike, bike))
+					killBike(otherBike);
 			}
+		}
+		if (collideBikeWithMapBorder(bike)) {
+			killBike(bike);
+			continue;
 		}
 	}
 }
@@ -151,13 +168,14 @@ void newGame() {
 		deleteBike(bikes.at(i));
 	bikes.clear();
 
-	for (int i = 0; i < 5; i++) {
+	static const int bikesNum = 5;
+	for (int i = 0; i < bikesNum; i++) {
 		Bike *bike = new Bike;
 		bikes.push_back(bike);
 		// TODO better bike initialization
-		bike->pos.x = 2*i;
-		bike->pos.z = random()%10;
-		bike->direction = 0;
+		bike->pos.x = mapWidth * (i+1) / (bikesNum+1);
+		bike->pos.z = 0;
+		bike->direction = 2;
 		bike->speed = defaultBikeSpeed;
 		bike->wallHeight = 1;
 		resetBikeWalls(bike);
@@ -168,19 +186,19 @@ void newGame() {
 	}
 	// own bike
 	ownBike = bikes.at(0);
-	ownBike->pos.z = -15;
-	ownBike->direction = 2;
+	ownBike->pos.z = mapHeight;
+	ownBike->direction = 0;
 	resetBikeWalls(ownBike);
 	viewFromTop = false;
 }
 
 ///// OpenGL and GLFW /////
 
-static void error_callback(int error, const char* description) {
+void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
 
-static void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
 		switch (key) {
 			case GLFW_KEY_ESCAPE:
@@ -220,7 +238,7 @@ GLFWwindow *setupWindow() {
 	return window;
 }
 
-static void drawBikeAndWalls(Bike *bike) {
+void drawBikeAndWalls(Bike *bike) {
 	glColor3fv(bike->color);
 	// TODO fancy bike
 	if (!isBikeDying(bike)) {
@@ -294,6 +312,29 @@ static void drawBikeAndWalls(Bike *bike) {
 	}
 }
 
+void drawFloorAndBorders() {
+	glPushMatrix();
+	glBegin(GL_QUADS);
+	glColor3f(0.2, 0.2, 0.2);
+
+	// floor
+	glVertex3f(       0, -0.01,         0);
+	glVertex3f(       0, -0.01, mapHeight);
+	glVertex3f(mapWidth, -0.01, mapHeight);
+	glVertex3f(mapWidth, -0.01,         0);
+
+	// TODO borders
+
+	glEnd();
+	glPopMatrix();
+}
+
+void drawScene() {
+	for (int i = 0; i < bikes.size(); i++)
+		drawBikeAndWalls(bikes.at(i));
+	drawFloorAndBorders();
+}
+
 ///// main /////
 
 int main() {
@@ -303,6 +344,8 @@ int main() {
 	srand(glfwGetTime()*100000);
 	newGame();
 	while (!glfwWindowShouldClose(window)) {
+		///// game processing /////
+
 		static double lastFrameSec = glfwGetTime();
 		float frameSec = glfwGetTime() - lastFrameSec;
 		lastFrameSec = glfwGetTime();
@@ -319,40 +362,61 @@ int main() {
 		glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
 		glViewport(0, 0, windowWidth, windowHeight);
 
+		///// drawing /////
+
 		glClearColor(0.5, 0.5, 1, 1);
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
-		// set projection perspective
+		// draw first person view
+
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		gluPerspective(60, (GLfloat)windowWidth / (GLfloat)windowHeight, 0.7, 100);
-		if (viewFromTop) {
-			glRotatef(90, 1, 0, 0);
-			glTranslatef(-(ownBike->pos.x), -30, -(ownBike->pos.z)); // from the own bike's position
-		}
-		else {
-			// smooth curves
-			// TODO do not turn smoothly when game restarts
-			static float yRot = 0;
-			const float targetRot = 90*ownBike->direction;
-			float deltaRot = targetRot - yRot;
-			while (deltaRot >  180) deltaRot -= 360;
-			while (deltaRot < -180) deltaRot += 360;
-			yRot += deltaRot/3.0;
-			glTranslatef(0, -4, -7); // a bit from the top
-			glRotatef(yRot, 0, 1, 0);
-			glTranslatef(-(ownBike->pos.x), 0, -(ownBike->pos.z)); // from the own bike's position
-		}
 
-		// render objects
+		// smooth curves
+		// TODO do not turn smoothly when game restarts
+		static float yRot = 0;
+		const float targetRot = 90*ownBike->direction;
+		float deltaRot = targetRot - yRot;
+		while (deltaRot >  180) deltaRot -= 360;
+		while (deltaRot < -180) deltaRot += 360;
+		yRot += deltaRot/3.0;
+
+		glTranslatef(0, -viewHeight, -7); // a bit from the top
+		glRotatef(yRot, 0, 1, 0);
+		glTranslatef(-(ownBike->pos.x), 0, -(ownBike->pos.z)); // from the own bike's position
+
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
+		drawScene();
 
-		// draw scene
-		for (int i = 0; i < bikes.size(); i++)
-			drawBikeAndWalls(bikes.at(i));
+		// draw map
 
-		// fps calculations
+		glMatrixMode(GL_PROJECTION);
+		glLoadIdentity();
+		glOrtho(0,            // left
+				windowWidth,  // right
+				0,            // bottom
+				windowHeight, // top
+				0.1,          // near
+				100);         // far
+		glRotatef(90, 1, 0, 0);
+		glTranslatef(-0, -2, -windowHeight);
+		glScalef(windowWidth / 4 / mapWidth,
+				 1,
+				 windowWidth / 4 / mapWidth);
+
+		glMatrixMode(GL_MODELVIEW);
+		glLoadIdentity();
+		drawScene();
+
+		// finish rendering
+
+		glfwSwapBuffers(window);
+		glfwPollEvents();
+
+		///// fps calculations /////
+
 		static int frames = 0;
 		frames++;
 		static double lastSecond = glfwGetTime();
@@ -362,10 +426,6 @@ int main() {
 			printf("%3i fps\n", frames);
 			frames = 0;
 		}
-
-		// finish rendering
-		glfwSwapBuffers(window);
-		glfwPollEvents();
 	}
 	glfwDestroyWindow(window);
 	glfwTerminate();
