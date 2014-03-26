@@ -4,67 +4,72 @@
 #include <stdio.h>
 #include <vector>
 
-const float viewHeight = 1.1;
-bool viewFromTop = false;
+const float bikeRadius = .5;
+const float wallRadius = .1;
+const float defaultBikeSpeed = 7;
+const float wallShrinkSpeed = 3;
 
 struct Point {
 	float x, z;
 };
 
-Point point(float x, float z) {
-	Point p;
-	p.x = x;
-	p.z = z;
-	return p;
-}
-
 struct Bike {
 	Point pos;
 	char direction;
-	float height, speed;
+	float wallHeight, speed;
 	float color[3];
 	std::vector<Point> walls;
 };
 
 std::vector<Bike *> bikes;
+Bike *ownBike = NULL;
+bool viewFromTop = false;
 
 ///// game logic /////
 
 bool isBikeDying(Bike *bike) {
-	return bike->height < 1;
+	return bike->wallHeight < 1;
 }
 
 bool isBikeDead(Bike *bike) {
-	return bike->height <= 0.0001;
+	return bike->wallHeight <= 0;
 }
 
 bool collideBikeWithBike(Bike *bikeA, Bike *bikeB) {
 	// TODO collideBikeWithBike
+	// TODO print debugging message when colliding bike with itself
 	return false;
 }
 
 bool collideBikeWithWalls(Bike *bikeA, Bike *bikeB) {
 	// TODO variable names... :p
-	// TODO wrong maths... :p
-	Point wa = bikeB->pos, wb;
-	float bL = bikeA->pos.x - .5; // left
-	float bR = bikeA->pos.x + .5; // right
-	float bT = bikeA->pos.z - .5; // top
-	float bB = bikeA->pos.z + .5; // bottom
-	for (int i = bikeB->walls.size() - 1; i >= 0; i--) {
+	Point wa, wb;
+	float bw = bikeA->pos.x - bikeRadius; // west
+	float be = bikeA->pos.x + bikeRadius; // east
+	float bn = bikeA->pos.z - bikeRadius; // north
+	float bs = bikeA->pos.z + bikeRadius; // south
+	// do not collide with the two newest walls if bikeA == bikeB
+	if (bikeA == bikeB) {
+		if (bikeB->walls.size() < 3) return false;
+		wa = bikeB->walls.at(bikeB->walls.size() - 2); // start at third-newest wall
+	}
+	else wa = bikeB->pos;
+	for (int i = bikeB->walls.size() - (bikeA == bikeB ? 3 : 1); i >= 0; i--) {
 		wb = bikeB->walls.at(i);
-		float wL = (wa.x < wb.x) ? wa.x : wb.x; // left
-		float wR = (wa.x > wb.x) ? wa.x : wb.x; // right
-		float wT = (wa.z < wb.z) ? wa.z : wb.z; // top
-		float wB = (wa.z > wb.z) ? wa.z : wb.z; // bottom
-		if (wL < bR
-				&& wR > bL
-				&& wT < bB
-				&& wB > bT)
+		float ww = ((wa.x < wb.x) ? wa.x : wb.x) - wallRadius; // west
+		float we = ((wa.x > wb.x) ? wa.x : wb.x) + wallRadius; // east
+		float wn = ((wa.z < wb.z) ? wa.z : wb.z) - wallRadius; // north
+		float ws = ((wa.z > wb.z) ? wa.z : wb.z) + wallRadius; // south
+		if (ww <= be && we >= bw && wn <= bs && ws >= bn)
 			return true;
 		wa = wb;
 	}
 	return false;
+}
+
+void resetBikeWalls(Bike *bike) {
+	bike->walls.clear();
+	bike->walls.push_back(bike->pos);
 }
 
 void setBikeColor(Bike *bike, float r, float g, float b) {
@@ -73,48 +78,39 @@ void setBikeColor(Bike *bike, float r, float g, float b) {
 	bike->color[2] = b;
 }
 
-void resetBike(Bike *bike, float x, float z) {
-	bike->pos.x = x;
-	bike->pos.z = z;
-	bike->direction = 0;
-	bike->speed = 7;
-	bike->height = 1;
-	setBikeColor(bike, 1, 0, 1);
-	bike->walls.clear();
-	bike->walls.push_back(point(x, z));
-}
-
 void deleteBike(Bike *bike) {
 	// destructor stuff goes here
 	delete bike;
 }
 
 void killBike(Bike *bike) {
-	bike->height = .99999;
+	if (isBikeDying(bike)) return;
+	bike->wallHeight = .99999;
 	// TODO end/restart game if only one left
-	if (bike == bikes.at(0)) viewFromTop = true;
+	if (bike == ownBike) viewFromTop = true;
 }
 
 void moveBike(Bike *bike, float sec) {
 	// do not move dying bikes, make walls smaller instead
-	if (isBikeDying(bike) && !isBikeDead(bike)) {
-		bike->height -= sec;
-		if (bike->height < 0) bike->height = 0;
-		return;
+	if (isBikeDying(bike)) {
+		bike->wallHeight = bike->wallHeight - sec*wallShrinkSpeed;
+		if (bike->wallHeight < 0) bike->wallHeight = 0; // prevent overflow
 	}
-	switch (bike->direction) {
-		case 0:
-			bike->pos.z -= sec * bike->speed;
-			break;
-		case 1:
-			bike->pos.x += sec * bike->speed;
-			break;
-		case 2:
-			bike->pos.z += sec * bike->speed;
-			break;
-		case 3:
-			bike->pos.x -= sec * bike->speed;
-			break;
+	else {
+		switch (bike->direction) {
+			case 0:
+				bike->pos.z -= sec * bike->speed;
+				break;
+			case 1:
+				bike->pos.x += sec * bike->speed;
+				break;
+			case 2:
+				bike->pos.z += sec * bike->speed;
+				break;
+			case 3:
+				bike->pos.x -= sec * bike->speed;
+				break;
+		}
 	}
 }
 
@@ -128,6 +124,11 @@ void collideAllBikes() {
 	for (int i = 0; i < bikes.size(); i++) {
 		Bike *bikeA = bikes.at(i);
 		if (isBikeDead(bikeA)) continue;
+		// collide with own wall
+		if (collideBikeWithWalls(bikeA, bikeA)) {
+			killBike(bikeA);
+			continue;
+		}
 		for (int j = i+1; j < bikes.size(); j++) {
 			Bike *bikeB = bikes.at(j);
 			if (isBikeDead(bikeB)) continue;
@@ -153,14 +154,23 @@ void newGame() {
 	for (int i = 0; i < 5; i++) {
 		Bike *bike = new Bike;
 		bikes.push_back(bike);
-		resetBike(bike, 2*i, random()%10); // TODO better bike starting pos, color
+		// TODO better bike initialization
+		bike->pos.x = 2*i;
+		bike->pos.z = random()%10;
+		bike->direction = 0;
+		bike->speed = defaultBikeSpeed;
+		bike->wallHeight = 1;
+		resetBikeWalls(bike);
 		setBikeColor(bike,
-				(random()%10) / 10.0,
-				(random()%10) / 10.0,
-				(random()%10) / 10.0);
+				random()%2,
+				random()%2,
+				random()%2);
 	}
 	// own bike
-	resetBike(bikes.at(0), 0, -15);
+	ownBike = bikes.at(0);
+	ownBike->pos.z = -15;
+	ownBike->direction = 2;
+	resetBikeWalls(ownBike);
 	viewFromTop = false;
 }
 
@@ -182,10 +192,10 @@ static void key_callback(GLFWwindow* window, int key, int scancode, int action, 
 				newGame();
 				break;
 			case GLFW_KEY_LEFT:
-				turnBike(bikes.at(0), false);
+				turnBike(ownBike, false);
 				break;
 			case GLFW_KEY_RIGHT:
-				turnBike(bikes.at(0), true);
+				turnBike(ownBike, true);
 				break;
 		}
 	}
@@ -211,35 +221,77 @@ GLFWwindow *setupWindow() {
 }
 
 static void drawBikeAndWalls(Bike *bike) {
-	// TODO fancy bike
 	glColor3fv(bike->color);
-	glPushMatrix();
+	// TODO fancy bike
+	if (!isBikeDying(bike)) {
+		glPushMatrix();
 		glTranslatef(bike->pos.x, 0, bike->pos.z);
+
 		glBegin(GL_QUADS);
-			glVertex3f( 0.5, 1,  0.5);
-			glVertex3f(-0.5, 1,  0.5);
-			glVertex3f(-0.5, 1, -0.5);
-			glVertex3f( 0.5, 1, -0.5);
 
-			glVertex3f( 0.5, 0,  0.5);
-			glVertex3f(-0.5, 0,  0.5);
-			glVertex3f(-0.5, 0, -0.5);
-			glVertex3f( 0.5, 0, -0.5);
+		glVertex3f( 0.5, 1,  0.5);
+		glVertex3f(-0.5, 1,  0.5);
+		glVertex3f(-0.5, 1, -0.5);
+		glVertex3f( 0.5, 1, -0.5);
+
+		glVertex3f( 0.5, 0,  0.5);
+		glVertex3f(-0.5, 0,  0.5);
+		glVertex3f(-0.5, 0, -0.5);
+		glVertex3f( 0.5, 0, -0.5);
+
 		glEnd();
-	glPopMatrix();
 
+		glPopMatrix();
+	}
 	// walls
-	glBegin(GL_QUADS);
+	if (!isBikeDead(bike)) {
+		glBegin(GL_QUADS);
+
 		Point wa = bike->pos, wb;
 		for (int i = bike->walls.size() - 1; i >= 0; i--) {
 			wb = bike->walls.at(i);
-			glVertex3f(wa.x,  0.0, wa.z);
-			glVertex3f(wa.x,  1.0, wa.z);
-			glVertex3f(wb.x,  1.0, wb.z);
-			glVertex3f(wb.x,  0.0, wb.z);
+			float ww = ((wa.x < wb.x) ? wa.x : wb.x) - wallRadius; // west
+			float we = ((wa.x > wb.x) ? wa.x : wb.x) + wallRadius; // east
+			float wn = ((wa.z < wb.z) ? wa.z : wb.z) - wallRadius; // north
+			float ws = ((wa.z > wb.z) ? wa.z : wb.z) + wallRadius; // south
+
+			float bh = bike->wallHeight;
+
+			// western wall
+			glVertex3f(ww,  0, wn);
+			glVertex3f(ww, bh, wn);
+			glVertex3f(ww, bh, ws);
+			glVertex3f(ww,  0, ws);
+
+			// eastern wall
+			glVertex3f(we,  0, wn);
+			glVertex3f(we, bh, wn);
+			glVertex3f(we, bh, ws);
+			glVertex3f(we,  0, ws);
+
+			// northern wall
+			glVertex3f(ww,  0, wn);
+			glVertex3f(ww, bh, wn);
+			glVertex3f(we, bh, wn);
+			glVertex3f(we,  0, wn);
+
+			// southern wall
+			glVertex3f(ww,  0, ws);
+			glVertex3f(ww, bh, ws);
+			glVertex3f(we, bh, ws);
+			glVertex3f(we,  0, ws);
+
+			// top of the wall
+			glVertex3f(ww, bh, wn);
+			glVertex3f(ww, bh, ws);
+			glVertex3f(we, bh, ws);
+			glVertex3f(we, bh, wn);
+
 			wa = wb;
 		}
-	glEnd();
+
+		glEnd();
+	}
 }
 
 ///// main /////
@@ -275,21 +327,21 @@ int main() {
 		glLoadIdentity();
 		gluPerspective(60, (GLfloat)windowWidth / (GLfloat)windowHeight, 0.7, 100);
 		if (viewFromTop) {
-			gluLookAt(4, 30,  4,  // eye
-			          5, -5,  0,  // center
-			          0,  0, -1); // up
+			glRotatef(90, 1, 0, 0);
+			glTranslatef(-(ownBike->pos.x), -30, -(ownBike->pos.z)); // from the own bike's position
 		}
 		else {
 			// smooth curves
 			// TODO do not turn smoothly when game restarts
 			static float yRot = 0;
-			const float targetRot = 90*bikes.at(0)->direction;
+			const float targetRot = 90*ownBike->direction;
 			float deltaRot = targetRot - yRot;
 			while (deltaRot >  180) deltaRot -= 360;
 			while (deltaRot < -180) deltaRot += 360;
 			yRot += deltaRot/3.0;
+			glTranslatef(0, -4, -7); // a bit from the top
 			glRotatef(yRot, 0, 1, 0);
-			glTranslatef(-(bikes.at(0)->pos.x), -viewHeight, -(bikes.at(0)->pos.z));
+			glTranslatef(-(ownBike->pos.x), 0, -(ownBike->pos.z)); // from the own bike's position
 		}
 
 		// render objects
