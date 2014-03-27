@@ -8,6 +8,7 @@ const float wallRadius = .1;
 const float defaultBikeSpeed = 7;
 const float wallShrinkSpeed = 3;
 const float viewHeight = 4;
+const int bikesNum = 5;
 
 #endif // SETTINGS_H
 

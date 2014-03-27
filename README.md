@@ -10,12 +10,12 @@ To try it out, clone and `make run`.
 Controls
 --------
 
-- Control the bike with the `left` and `right` arrow keys.
-- When you die, you can change the bike you look at with the arrow keys.
+- Control the bike with `A` and `D` (Player 1) or the `left` and `right` arrow keys (Player 2).
+- When you die, you can change the bike you look at with the bike control keys.
 - `Enter` or `Space` starts a new game.
 - `Escape` or `Q` exits the game.
 
-Some sort of multiplayer is planned, probably even client-server.
+Client-server multiplayer is planned.
 
 I would be happy to get some information about existing bots.
 
