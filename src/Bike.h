@@ -16,6 +16,7 @@ class Bike {
 		std::vector<Point> walls;
 
 		Bike();
+		Bike(Bike *bike);
 		~Bike();
 
 		bool isDying();

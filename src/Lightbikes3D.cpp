@@ -14,6 +14,7 @@ int bikesLeft = 0;
 ///// game logic /////
 
 void newGame() {
+	printf("Game restart\n");
 	for (int i = 0; i < bikes.size(); i++)
 		delete (bikes.at(i));
 	bikes.clear();
@@ -24,17 +25,17 @@ void newGame() {
 		bikes.push_back(bike);
 		// TODO better bike initialization
 		bike->pos.x = mapSizeX * (i+1) / (bikesNum+1);
-		bike->pos.z = 0;
+		bike->pos.z = bikeRadius;
 		bike->direction = 2;
 		bike->speed = defaultBikeSpeed;
 		bike->wallHeight = 1;
 		bike->resetWalls();
-		bike->setColor(random()%2,
-		               random()%2,
-		               random()%2);
+		bike->setColor(i%2,
+		               (i/2)%2,
+		               (i/4)%2);
 	}
 	ownBike = bikes.at(0);
-	ownBike->pos.z = mapSizeZ;
+	ownBike->pos.z = mapSizeZ - bikeRadius;
 	ownBike->direction = 0;
 	ownBike->resetWalls();
 
@@ -51,8 +52,8 @@ int getBikeID(Bike *bike) {
 void killBike(Bike *bike) {
 	if (bike->isDying()) return;
 	printf("Bike %i crashed\n", getBikeID(bike));
-	bike->wallHeight = .99999;
-	// end/restart game if only one left
+	bike->wallHeight = 0.9999;
+	// end/restart game when last bike dies
 	bikesLeft--;
 	if (bikesLeft <= 0) newGame();
 }
@@ -164,10 +165,10 @@ void drawBikeAndWalls(Bike *bike) {
 		glVertex3f(-0.5, 1, -0.5);
 		glVertex3f( 0.5, 1, -0.5);
 
-		glVertex3f( 0.5, 0,  0.5);
-		glVertex3f(-0.5, 0,  0.5);
-		glVertex3f(-0.5, 0, -0.5);
-		glVertex3f( 0.5, 0, -0.5);
+		glVertex3f( 0.5, 0.001,  0.5);
+		glVertex3f(-0.5, 0.001,  0.5);
+		glVertex3f(-0.5, 0.001, -0.5);
+		glVertex3f( 0.5, 0.001, -0.5);
 
 		glEnd();
 
@@ -227,15 +228,37 @@ void drawBikeAndWalls(Bike *bike) {
 void drawFloorAndBorders() {
 	glPushMatrix();
 	glBegin(GL_QUADS);
-	glColor3f(0.2, 0.2, 0.2);
 
 	// floor
-	glVertex3f(       0, -0.01,        0);
-	glVertex3f(       0, -0.01, mapSizeZ);
-	glVertex3f(mapSizeX, -0.01, mapSizeZ);
-	glVertex3f(mapSizeX, -0.01,        0);
+	glColor3f(0.2, 0.2, 0.2);
 
-	// TODO borders
+	glVertex3f(       0, 0, 0);
+	glVertex3f(       0, 0, mapSizeZ);
+	glVertex3f(mapSizeX, 0, mapSizeZ);
+	glVertex3f(mapSizeX, 0, 0);
+
+	// borders
+	glColor3f(0.3, 0.3, 0.3);
+
+	glVertex3f(       0, 0, 0);
+	glVertex3f(       0, 1, 0);
+	glVertex3f(mapSizeX, 1, 0);
+	glVertex3f(mapSizeX, 0, 0);
+
+	glVertex3f(       0, 0, mapSizeZ);
+	glVertex3f(       0, 1, mapSizeZ);
+	glVertex3f(mapSizeX, 1, mapSizeZ);
+	glVertex3f(mapSizeX, 0, mapSizeZ);
+
+	glVertex3f(0, 0, 0);
+	glVertex3f(0, 1, 0);
+	glVertex3f(0, 1, mapSizeZ);
+	glVertex3f(0, 0, mapSizeZ);
+
+	glVertex3f(mapSizeX, 0, 0);
+	glVertex3f(mapSizeX, 1, 0);
+	glVertex3f(mapSizeX, 1, mapSizeZ);
+	glVertex3f(mapSizeX, 0, mapSizeZ);
 
 	glEnd();
 	glPopMatrix();

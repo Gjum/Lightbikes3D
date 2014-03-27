@@ -1,7 +1,28 @@
 #include "Bike.h"
 #include "Settings.h"
 
-Bike::Bike() {}
+Bike::Bike() {
+	pos.x = 0;
+	pos.z = 0;
+	direction = 0;
+	wallHeight = 0;
+	speed = 0;
+	color[0] = 1;
+	color[1] = 0;
+	color[2] = 1;
+	walls.clear();
+}
+
+Bike::Bike(Bike *bike) {
+	bike->pos = pos;
+	bike->direction = direction;
+	bike->wallHeight = wallHeight;
+	bike->speed = speed;
+	bike->color[0] = color[0];
+	bike->color[1] = color[1];
+	bike->color[2] = color[2];
+}
+
 Bike::~Bike() {}
 
 bool Bike::isDying() {
@@ -44,8 +65,10 @@ bool Bike::collideWithWalls(Bike *otherBike) {
 }
 
 bool Bike::collideWithMapBorder() {
-	// TODO collideWithMapBorder
-	return false;
+	return pos.x-bikeRadius < 0
+	    || pos.x+bikeRadius > mapSizeX
+	    || pos.z-bikeRadius < 0
+	    || pos.z+bikeRadius > mapSizeZ;
 }
 
 void Bike::resetWalls() {
