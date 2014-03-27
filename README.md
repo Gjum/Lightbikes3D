@@ -20,3 +20,8 @@ Some sort of multiplayer is planned, probably even client-server.
 I would be happy to get some information about existing bots.
 
 Have fun!
+
+---
+Licensed under the MIT license, see "LICENSE.txt".
+
+Copyright (c) 2014 Gjum <http://gjum.sytes.net/>
