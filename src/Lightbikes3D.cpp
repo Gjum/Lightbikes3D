@@ -26,7 +26,7 @@ struct Bike {
 
 std::vector<Bike *> bikes;
 Bike *ownBike = NULL;
-bool viewFromTop = false;
+int viewedBikeID = 0;
 
 ///// game logic /////
 
@@ -100,7 +100,6 @@ void killBike(Bike *bike) {
 	printf("Bike %i crashed\n", getBikeID(bike));
 	bike->wallHeight = .99999;
 	// TODO end/restart game if only one left
-	if (bike == ownBike) viewFromTop = true;
 }
 
 void moveBike(Bike *bike, float sec) {
@@ -184,12 +183,18 @@ void newGame() {
 				random()%2,
 				random()%2);
 	}
-	// own bike
 	ownBike = bikes.at(0);
 	ownBike->pos.z = mapHeight;
 	ownBike->direction = 0;
 	resetBikeWalls(ownBike);
-	viewFromTop = false;
+	viewedBikeID = 0;
+}
+
+void goToLivingBike(bool next) {
+	do {
+		viewedBikeID += next ? 1 : bikes.size()-1;
+		viewedBikeID %= bikes.size();
+	} while (isBikeDead(bikes.at(viewedBikeID)));
 }
 
 ///// OpenGL and GLFW /////
@@ -198,7 +203,7 @@ void error_callback(int error, const char* description) {
 	fputs(description, stderr);
 }
 
-void key_callback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
 	if (action == GLFW_PRESS) {
 		switch (key) {
 			case GLFW_KEY_ESCAPE:
@@ -210,10 +215,12 @@ void key_callback(GLFWwindow* window, int key, int scancode, int action, int mod
 				newGame();
 				break;
 			case GLFW_KEY_LEFT:
-				turnBike(ownBike, false);
+				if (isBikeDying(ownBike)) goToLivingBike(false);
+				else turnBike(ownBike, false);
 				break;
 			case GLFW_KEY_RIGHT:
-				turnBike(ownBike, true);
+				if (isBikeDying(ownBike)) goToLivingBike(true);
+				else turnBike(ownBike, true);
 				break;
 		}
 	}
@@ -231,7 +238,7 @@ GLFWwindow *setupWindow() {
 		exit(EXIT_FAILURE);
 	}
 	glfwMakeContextCurrent(window);
-	glfwSetKeyCallback(window, key_callback);
+	glfwSetKeyCallback(window, keyCallback);
 
 	glEnable(GL_DEPTH_TEST);
 
@@ -376,7 +383,7 @@ int main() {
 		// smooth curves
 		// TODO do not turn smoothly when game restarts
 		static float yRot = 0;
-		const float targetRot = 90*ownBike->direction;
+		const float targetRot = 90*bikes.at(viewedBikeID)->direction;
 		float deltaRot = targetRot - yRot;
 		while (deltaRot >  180) deltaRot -= 360;
 		while (deltaRot < -180) deltaRot += 360;
@@ -384,7 +391,9 @@ int main() {
 
 		glTranslatef(0, -viewHeight, -7); // a bit from the top
 		glRotatef(yRot, 0, 1, 0);
-		glTranslatef(-(ownBike->pos.x), 0, -(ownBike->pos.z)); // from the own bike's position
+		glTranslatef(-(bikes.at(viewedBikeID)->pos.x),
+		             -0,
+		             -(bikes.at(viewedBikeID)->pos.z)); // from the position of the viewed bike
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
@@ -395,16 +404,16 @@ int main() {
 		glMatrixMode(GL_PROJECTION);
 		glLoadIdentity();
 		glOrtho(0,            // left
-				windowWidth,  // right
-				0,            // bottom
-				windowHeight, // top
-				0.1,          // near
-				100);         // far
+		        windowWidth,  // right
+		        0,            // bottom
+		        windowHeight, // top
+		        0.1,          // near
+		        100);         // far
 		glRotatef(90, 1, 0, 0);
 		glTranslatef(-0, -2, -windowHeight);
 		glScalef(windowWidth / 4 / mapWidth,
-				 1,
-				 windowWidth / 4 / mapWidth);
+		         1,
+		         windowWidth / 4 / mapWidth);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
