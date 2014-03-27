@@ -9,8 +9,38 @@
 std::vector<Bike *> bikes;
 Bike *ownBike = NULL;
 int viewedBikeID = 0;
+int bikesLeft = 0;
 
 ///// game logic /////
+
+void newGame() {
+	for (int i = 0; i < bikes.size(); i++)
+		delete (bikes.at(i));
+	bikes.clear();
+
+	static const int bikesNum = 5;
+	for (int i = 0; i < bikesNum; i++) {
+		Bike *bike = new Bike;
+		bikes.push_back(bike);
+		// TODO better bike initialization
+		bike->pos.x = mapSizeX * (i+1) / (bikesNum+1);
+		bike->pos.z = 0;
+		bike->direction = 2;
+		bike->speed = defaultBikeSpeed;
+		bike->wallHeight = 1;
+		bike->resetWalls();
+		bike->setColor(random()%2,
+		               random()%2,
+		               random()%2);
+	}
+	ownBike = bikes.at(0);
+	ownBike->pos.z = mapSizeZ;
+	ownBike->direction = 0;
+	ownBike->resetWalls();
+
+	viewedBikeID = 0;
+	bikesLeft = bikesNum;
+}
 
 int getBikeID(Bike *bike) {
 	for (int i = 0; i < bikes.size(); i++)
@@ -22,7 +52,9 @@ void killBike(Bike *bike) {
 	if (bike->isDying()) return;
 	printf("Bike %i crashed\n", getBikeID(bike));
 	bike->wallHeight = .99999;
-	// TODO end/restart game if only one left
+	// end/restart game if only one left
+	bikesLeft--;
+	if (bikesLeft <= 0) newGame();
 }
 
 void collideAllBikes() {
@@ -66,31 +98,8 @@ void goToLivingBike(bool next) {
 	viewedBikeID = newBikeID;
 }
 
-void newGame() {
-	for (int i = 0; i < bikes.size(); i++)
-		delete (bikes.at(i));
-	bikes.clear();
-
-	static const int bikesNum = 5;
-	for (int i = 0; i < bikesNum; i++) {
-		Bike *bike = new Bike;
-		bikes.push_back(bike);
-		// TODO better bike initialization
-		bike->pos.x = mapWidth * (i+1) / (bikesNum+1);
-		bike->pos.z = 0;
-		bike->direction = 2;
-		bike->speed = defaultBikeSpeed;
-		bike->wallHeight = 1;
-		bike->resetWalls();
-		bike->setColor(random()%2,
-		               random()%2,
-		               random()%2);
-	}
-	ownBike = bikes.at(0);
-	ownBike->pos.z = mapHeight;
-	ownBike->direction = 0;
-	ownBike->resetWalls();
-	viewedBikeID = 0;
+void aiTick(float sec) {
+	// TODO control the bots
 }
 
 ///// OpenGL and GLFW /////
@@ -103,11 +112,11 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 	if (action == GLFW_PRESS) {
 		switch (key) {
 			case GLFW_KEY_ESCAPE:
-			case GLFW_KEY_ENTER:
 			case GLFW_KEY_Q:
 				glfwSetWindowShouldClose(window, GL_TRUE);
 				break;
 			case GLFW_KEY_SPACE:
+			case GLFW_KEY_ENTER:
 				newGame();
 				break;
 			case GLFW_KEY_LEFT:
@@ -221,10 +230,10 @@ void drawFloorAndBorders() {
 	glColor3f(0.2, 0.2, 0.2);
 
 	// floor
-	glVertex3f(       0, -0.01,         0);
-	glVertex3f(       0, -0.01, mapHeight);
-	glVertex3f(mapWidth, -0.01, mapHeight);
-	glVertex3f(mapWidth, -0.01,         0);
+	glVertex3f(       0, -0.01,        0);
+	glVertex3f(       0, -0.01, mapSizeZ);
+	glVertex3f(mapSizeX, -0.01, mapSizeZ);
+	glVertex3f(mapSizeX, -0.01,        0);
 
 	// TODO borders
 
@@ -252,6 +261,8 @@ int main() {
 		static double lastFrameSec = glfwGetTime();
 		float frameSec = glfwGetTime() - lastFrameSec;
 		lastFrameSec = glfwGetTime();
+
+		aiTick(frameSec);
 
 		for (int i = 0; i < bikes.size(); i++)
 			bikes.at(i)->move(frameSec);
@@ -307,9 +318,9 @@ int main() {
 		        100);         // far
 		glRotatef(90, 1, 0, 0);
 		glTranslatef(-0, -2, -windowHeight);
-		glScalef(windowWidth / 4 / mapWidth,
+		glScalef(windowWidth / 4 / mapSizeX,
 		         1,
-		         windowWidth / 4 / mapWidth);
+		         windowWidth / 4 / mapSizeX);
 
 		glMatrixMode(GL_MODELVIEW);
 		glLoadIdentity();
