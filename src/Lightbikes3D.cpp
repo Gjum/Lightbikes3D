@@ -3,26 +3,8 @@
 #include <cstdlib>
 #include <cstdio>
 #include <vector>
-
-const float mapWidth  = 20;
-const float mapHeight = 20;
-const float bikeRadius = .5;
-const float wallRadius = .1;
-const float defaultBikeSpeed = 7;
-const float wallShrinkSpeed = 3;
-const float viewHeight = 4;
-
-struct Point {
-	float x, z;
-};
-
-struct Bike {
-	Point pos;
-	char direction;
-	float wallHeight, speed;
-	float color[3];
-	std::vector<Point> walls;
-};
+#include "Bike.h"
+#include "Settings.h"
 
 std::vector<Bike *> bikes;
 Bike *ownBike = NULL;
@@ -36,135 +18,57 @@ int getBikeID(Bike *bike) {
 	return -1;
 }
 
-bool isBikeDying(Bike *bike) {
-	return bike->wallHeight < 1;
-}
-
-bool isBikeDead(Bike *bike) {
-	return bike->wallHeight <= 0;
-}
-
-bool collideBikeWithBike(Bike *bike, Bike *otherBike) {
-	// TODO collideBikeWithBike
-	// TODO print debugging message when colliding bike with itself
-	return false;
-}
-
-bool collideBikeWithWalls(Bike *bike, Bike *otherBike) {
-	Point wa, wb;
-	float bw = bike->pos.x - bikeRadius; // west
-	float be = bike->pos.x + bikeRadius; // east
-	float bn = bike->pos.z - bikeRadius; // north
-	float bs = bike->pos.z + bikeRadius; // south
-	// do not collide with the two newest walls if bike == otherBike
-	if (bike == otherBike) {
-		if (otherBike->walls.size() < 3) return false;
-		wa = otherBike->walls.at(otherBike->walls.size() - 2); // start at third-newest wall
-	}
-	else wa = otherBike->pos;
-	for (int i = otherBike->walls.size() - (bike == otherBike ? 3 : 1); i >= 0; i--) {
-		wb = otherBike->walls.at(i);
-		float ww = ((wa.x < wb.x) ? wa.x : wb.x) - wallRadius; // west
-		float we = ((wa.x > wb.x) ? wa.x : wb.x) + wallRadius; // east
-		float wn = ((wa.z < wb.z) ? wa.z : wb.z) - wallRadius; // north
-		float ws = ((wa.z > wb.z) ? wa.z : wb.z) + wallRadius; // south
-		if (ww <= be && we >= bw && wn <= bs && ws >= bn)
-			return true;
-		wa = wb;
-	}
-	return false;
-}
-
-bool collideBikeWithMapBorder(Bike *bike) {
-	return false;
-}
-
-void resetBikeWalls(Bike *bike) {
-	bike->walls.clear();
-	bike->walls.push_back(bike->pos);
-}
-
-void setBikeColor(Bike *bike, float r, float g, float b) {
-	bike->color[0] = r;
-	bike->color[1] = g;
-	bike->color[2] = b;
-}
-
-void deleteBike(Bike *bike) {
-	// destructor stuff goes here
-	delete bike;
-}
-
 void killBike(Bike *bike) {
-	if (isBikeDying(bike)) return;
+	if (bike->isDying()) return;
 	printf("Bike %i crashed\n", getBikeID(bike));
 	bike->wallHeight = .99999;
 	// TODO end/restart game if only one left
 }
 
-void moveBike(Bike *bike, float sec) {
-	// do not move dying bikes, make walls smaller instead
-	if (isBikeDying(bike)) {
-		bike->wallHeight = bike->wallHeight - sec*wallShrinkSpeed;
-		if (bike->wallHeight < 0) bike->wallHeight = 0; // prevent overflow
-	}
-	else {
-		switch (bike->direction) {
-			case 0:
-				bike->pos.z -= sec * bike->speed;
-				break;
-			case 1:
-				bike->pos.x += sec * bike->speed;
-				break;
-			case 2:
-				bike->pos.z += sec * bike->speed;
-				break;
-			case 3:
-				bike->pos.x -= sec * bike->speed;
-				break;
-		}
-	}
-}
-
-void turnBike(Bike *bike, bool right) {
-	if (isBikeDying(bike)) return;
-	bike->direction = (bike->direction + (right ? 1 : 3)) % 4;
-	bike->walls.push_back(bike->pos);
-}
-
 void collideAllBikes() {
 	for (int i = 0; i < bikes.size(); i++) {
 		Bike *bike = bikes.at(i);
-		if (isBikeDying(bike)) continue;
+		if (bike->isDying()) continue;
 		// collide with own wall
-		if (collideBikeWithWalls(bike, bike)) {
+		if (bike->collideWithWalls(bike)) {
 			killBike(bike);
 			continue;
 		}
 		for (int j = i+1; j < bikes.size(); j++) {
 			Bike *otherBike = bikes.at(j);
-			if (isBikeDying(otherBike)) continue;
-			if (collideBikeWithBike(bike, otherBike)) {
+			if (otherBike->isDying()) continue;
+			if (bike->collideWithBike(otherBike)) {
 				killBike(bike);
 				killBike(otherBike);
 			}
 			else {
-				if (collideBikeWithWalls(bike, otherBike))
+				if (bike->collideWithWalls(otherBike))
 					killBike(bike);
-				if (collideBikeWithWalls(otherBike, bike))
+				if (otherBike->collideWithWalls(bike))
 					killBike(otherBike);
 			}
 		}
-		if (collideBikeWithMapBorder(bike)) {
+		if (bike->collideWithMapBorder()) {
 			killBike(bike);
 			continue;
 		}
 	}
 }
 
+void goToLivingBike(bool next) {
+	int tries = 0, // loop would be infinite if all bikes are dead, but game should have ended then
+	    newBikeID = viewedBikeID;;
+	do {
+		if (tries++ > bikes.size()) return;
+		newBikeID += next ? 1 : bikes.size()-1;
+		newBikeID %= bikes.size();
+	} while (bikes.at(newBikeID)->isDead());
+	viewedBikeID = newBikeID;
+}
+
 void newGame() {
 	for (int i = 0; i < bikes.size(); i++)
-		deleteBike(bikes.at(i));
+		delete (bikes.at(i));
 	bikes.clear();
 
 	static const int bikesNum = 5;
@@ -177,24 +81,16 @@ void newGame() {
 		bike->direction = 2;
 		bike->speed = defaultBikeSpeed;
 		bike->wallHeight = 1;
-		resetBikeWalls(bike);
-		setBikeColor(bike,
-				random()%2,
-				random()%2,
-				random()%2);
+		bike->resetWalls();
+		bike->setColor(random()%2,
+		               random()%2,
+		               random()%2);
 	}
 	ownBike = bikes.at(0);
 	ownBike->pos.z = mapHeight;
 	ownBike->direction = 0;
-	resetBikeWalls(ownBike);
+	ownBike->resetWalls();
 	viewedBikeID = 0;
-}
-
-void goToLivingBike(bool next) {
-	do {
-		viewedBikeID += next ? 1 : bikes.size()-1;
-		viewedBikeID %= bikes.size();
-	} while (isBikeDead(bikes.at(viewedBikeID)));
 }
 
 ///// OpenGL and GLFW /////
@@ -215,12 +111,12 @@ void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods
 				newGame();
 				break;
 			case GLFW_KEY_LEFT:
-				if (isBikeDying(ownBike)) goToLivingBike(false);
-				else turnBike(ownBike, false);
+				if (ownBike->isDying()) goToLivingBike(false);
+				else ownBike->turn(false);
 				break;
 			case GLFW_KEY_RIGHT:
-				if (isBikeDying(ownBike)) goToLivingBike(true);
-				else turnBike(ownBike, true);
+				if (ownBike->isDying()) goToLivingBike(true);
+				else ownBike->turn(true);
 				break;
 		}
 	}
@@ -248,7 +144,7 @@ GLFWwindow *setupWindow() {
 void drawBikeAndWalls(Bike *bike) {
 	glColor3fv(bike->color);
 	// TODO fancy bike
-	if (!isBikeDying(bike)) {
+	if (!bike->isDying()) {
 		glPushMatrix();
 		glTranslatef(bike->pos.x, 0, bike->pos.z);
 
@@ -269,7 +165,7 @@ void drawBikeAndWalls(Bike *bike) {
 		glPopMatrix();
 	}
 	// walls
-	if (!isBikeDead(bike)) {
+	if (!bike->isDead()) {
 		glBegin(GL_QUADS);
 
 		Point wa = bike->pos, wb;
@@ -358,7 +254,7 @@ int main() {
 		lastFrameSec = glfwGetTime();
 
 		for (int i = 0; i < bikes.size(); i++)
-			moveBike(bikes.at(i), frameSec);
+			bikes.at(i)->move(frameSec);
 
 		collideAllBikes();
 
