@@ -9,7 +9,6 @@
 std::vector<Bike *> bikes;
 Bike *ownBike = NULL;
 int viewedBikeID = 0;
-int bikesLeft = 0;
 
 ///// game logic /////
 
@@ -21,7 +20,7 @@ void newGame() {
 
 	static const int bikesNum = 5;
 	for (int i = 0; i < bikesNum; i++) {
-		Bike *bike = new Bike;
+		Bike *bike = new Bike();
 		bikes.push_back(bike);
 		// TODO better bike initialization
 		bike->pos.x = mapSizeX * (i+1) / (bikesNum+1);
@@ -40,7 +39,6 @@ void newGame() {
 	ownBike->resetWalls();
 
 	viewedBikeID = 0;
-	bikesLeft = bikesNum;
 }
 
 int getBikeID(Bike *bike) {
@@ -49,43 +47,47 @@ int getBikeID(Bike *bike) {
 	return -1;
 }
 
+void testForGameOver() {
+	int bikesLeft = 0;
+	int lastLivingBike = -1;
+	for (int i = 0; i < bikes.size(); i++) {
+		if (!bikes.at(i)->isDying()) {
+			bikesLeft++;
+			if (bikesLeft >= 2) return;
+			lastLivingBike = i;
+		}
+	}
+	if (bikesLeft < 2) {
+		if (lastLivingBike == -1) printf("Tie!\n");
+		else printf("Bike %i wins!\n", lastLivingBike);
+		newGame();
+	}
+}
+
 void killBike(Bike *bike) {
 	if (bike->isDying()) return;
 	printf("Bike %i crashed\n", getBikeID(bike));
 	bike->wallHeight = 0.9999;
-	// end/restart game when last bike dies
-	bikesLeft--;
-	if (bikesLeft <= 0) newGame();
+}
+
+bool collideBikeWithEverything(Bike *bike) {
+	if (bike->collideWithMapBorder())
+		return true;
+	for (int i = 0; i < bikes.size(); i++) {
+		Bike *otherBike = bikes.at(i);
+		if (otherBike->isDead()) continue;
+		if (bike->collideWithWalls(otherBike))
+			return true;
+		if (otherBike != bike && bike->collideWithBike(otherBike))
+			return true;
+	}
+	return false;
 }
 
 void collideAllBikes() {
-	for (int i = 0; i < bikes.size(); i++) {
-		Bike *bike = bikes.at(i);
-		if (bike->isDying()) continue;
-		// collide with own wall
-		if (bike->collideWithWalls(bike)) {
-			killBike(bike);
-			continue;
-		}
-		for (int j = i+1; j < bikes.size(); j++) {
-			Bike *otherBike = bikes.at(j);
-			if (otherBike->isDying()) continue;
-			if (bike->collideWithBike(otherBike)) {
-				killBike(bike);
-				killBike(otherBike);
-			}
-			else {
-				if (bike->collideWithWalls(otherBike))
-					killBike(bike);
-				if (otherBike->collideWithWalls(bike))
-					killBike(otherBike);
-			}
-		}
-		if (bike->collideWithMapBorder()) {
-			killBike(bike);
-			continue;
-		}
-	}
+	for (int i = 0; i < bikes.size(); i++)
+		if (collideBikeWithEverything(bikes.at(i)))
+			killBike(bikes.at(i));
 }
 
 void goToLivingBike(bool next) {
@@ -101,6 +103,36 @@ void goToLivingBike(bool next) {
 
 void aiTick(float sec) {
 	// TODO control the bots
+	// start at 1, because 0 is the player
+	for (int i = 1; i < bikes.size(); i++) {
+		Bike *bike = bikes.at(i);
+		if (bike->isDying()) continue;
+		Bike *ghostA = new Bike(bike);
+		bike->wallHeight = 0; // simulate death to be ignored on collision tests
+		bool right, turn = false;
+		// move twice to avoid frontal crash with other bike
+		ghostA->move(sec);
+		ghostA->move(sec);
+		if (collideBikeWithEverything(ghostA) || ghostA->collideWithWalls(ghostA)) {
+			// bike is about to crash, but could dodge
+			turn = true;
+			right = true;
+			// TODO fix turning to random direction
+//			right = random()%2 == 0; // 1:1 left or right
+//			// is it safe to move into this direction?
+//			Bike *ghostB = new Bike(bike);
+//			ghostB->turn(right);
+//			ghostB->move(sec);
+//			if (collideBikeWithEverything(ghostB) || ghostB->collideWithWalls(ghostB)) {
+//				// no, it's not safe this way, turn the other way
+//				right = !right;
+//			}
+//			delete ghostB;
+		}
+		delete ghostA;
+		bike->wallHeight = 1;
+		if (turn) bike->turn(right);
+	}
 }
 
 ///// OpenGL and GLFW /////
@@ -279,18 +311,17 @@ int main() {
 	srand(glfwGetTime()*100000);
 	newGame();
 	while (!glfwWindowShouldClose(window)) {
-		///// game processing /////
-
 		static double lastFrameSec = glfwGetTime();
 		float frameSec = glfwGetTime() - lastFrameSec;
 		lastFrameSec = glfwGetTime();
 
-		aiTick(frameSec);
+		///// game processing /////
 
+		aiTick(frameSec);
 		for (int i = 0; i < bikes.size(); i++)
 			bikes.at(i)->move(frameSec);
-
 		collideAllBikes();
+		testForGameOver();
 
 		// TODO increase/decrease speed
 		if (glfwGetKey(window, GLFW_KEY_UP)) {}
