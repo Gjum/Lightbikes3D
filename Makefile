@@ -1,14 +1,14 @@
-run: bin/Lightbikes3D
-	@echo ===== Running Lightbikes3D =======================
-	@bin/Lightbikes3D
+run: bin/Lightcycles3D
+	@echo ===== Running Lightcycles3D ======================
+	@bin/Lightcycles3D
 	@echo ===== Done =======================================
 
-bin/Lightbikes3D: src/Lightbikes3D.cpp obj/Bike.o obj/Player.o
-	@echo ===== Compiling Lightbikes3D =====================
+bin/Lightcycles3D: src/Lightcycles3D.cpp obj/Bike.o obj/Player.o
+	@echo ===== Compiling Lightcycles3D ====================
 	@mkdir -p bin/
-	@g++ -o bin/Lightbikes3D src/Lightbikes3D.cpp obj/Bike.o obj/Player.o \
+	@g++ -o bin/Lightcycles3D src/Lightcycles3D.cpp obj/Bike.o obj/Player.o \
 		-lGL -lGLU -lglfw3 -lXrandr -lXi -lX11 -lXxf86vm -lpthread -std=c++11
-	@echo ===== Lightbikes3D compiled ======================
+	@echo ===== Lightcycles3D compiled =====================
 
 obj/Bike.o: src/Bike.h src/Bike.cpp
 	@echo ===== Compiling Bike =============================

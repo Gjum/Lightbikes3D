@@ -1,7 +1,7 @@
-Lightbikes3D
-============
+Lightcycles3D
+=============
 
-Yet another TRON lightbikes 3D game implementation.
+Yet another TRON lightcycles 3D game implementation.
 
 Currently heavily under development, but `master` should be stable.
 
@@ -10,8 +10,8 @@ To try it out, clone and `make run`.
 Controls
 --------
 
-- Control the bike with `A` and `D` (Player 1) or the `left` and `right` arrow keys (Player 2).
-- When you die, you can change the bike you look at with the bike control keys.
+- Control your lightcycle with `A` and `D` (Player 1) or the `left` and `right` arrow keys (Player 2).
+- When you die, you can change the lightcycle you look at with `A` and `D` or `left` and `right`.
 - `Enter` or `Space` starts a new game.
 - `Escape` or `Q` exits the game.
 

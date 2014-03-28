@@ -13,7 +13,7 @@ extern void drawScene();
 extern std::vector<Bike *> bikes;
 
 Player::Player(int bikeID) {
-	window = glfwCreateWindow(650, 500, "Lightbikes", NULL, NULL);
+	window = glfwCreateWindow(650, 500, "Lightcycles", NULL, NULL);
 	if (!window) {
 		glfwTerminate();
 		exit(EXIT_FAILURE);
