@@ -1,9 +1,6 @@
-#include <GL/glu.h>
-#include <GLFW/glfw3.h>
-#include <cstdlib>
-#include <cstdio>
-#include <ctime>
-#include <vector>
+#include <SFML/OpenGL.hpp>
+#include <SFML/Window.hpp>
+
 #include "Player.h"
 #include "Bike.h"
 #include "Settings.h"
@@ -28,8 +25,8 @@ void newGame() {
 		              ((i+1)/2)%2,
 		              ((i+1)/4)%2);
 	}
-	players[0]->viewedBikeID = 0;
-	players[1]->viewedBikeID = 1;
+	players[0]->onNewGame();
+	players[1]->onNewGame();
 }
 
 int getBikeID(Bike *bike) {
@@ -129,37 +126,51 @@ void aiTick(float sec) {
 	}
 }
 
-///// OpenGL and GLFW /////
+///// controls and drawing /////
 
-void error_callback(int error, const char* description) {
-	fputs(description, stderr);
+double now(sf::Clock clock) {
+	return clock.getElapsedTime().asMicroseconds() / 1000000.0;
 }
 
-void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
-	if (action == GLFW_PRESS) {
-		switch (key) {
-			case GLFW_KEY_ESCAPE:
-			case GLFW_KEY_Q:
-				glfwSetWindowShouldClose(window, GL_TRUE);
+void pollEvents(sf::Window *window) {
+	sf::Event event;
+	while (window->pollEvent(event)) {
+		switch (event.type) {
+			case sf::Event::KeyPressed:
+				switch (event.key.code) {
+					case sf::Keyboard::Space:
+					case sf::Keyboard::Return:
+						newGame();
+						break;
+					case sf::Keyboard::Escape:
+					case sf::Keyboard::Q:
+						window->close();
+						break;
+					default:
+						if (event.key.code == players[0]->controlKeyLeft)
+							players[0]->turnBike(false);
+						else if (event.key.code == players[0]->controlKeyRight)
+							players[0]->turnBike(true);
+						else if (event.key.code == players[1]->controlKeyLeft)
+							players[1]->turnBike(false);
+						else if (event.key.code == players[1]->controlKeyRight)
+							players[1]->turnBike(true);
+						break;
+				}
 				break;
-			case GLFW_KEY_SPACE:
-			case GLFW_KEY_ENTER:
-				newGame();
+			case sf::Event::Closed:
+				window->close();
 				break;
-			case GLFW_KEY_A:
-				players[0]->turnBike(false);
-				break;
-			case GLFW_KEY_D:
-				players[0]->turnBike(true);
-				break;
-			case GLFW_KEY_LEFT:
-				players[1]->turnBike(false);
-				break;
-			case GLFW_KEY_RIGHT:
-				players[1]->turnBike(true);
+			default:
 				break;
 		}
 	}
+}
+
+void pollAllEvents() {
+	pollEvents(players[0]->window);
+	pollEvents(players[1]->window);
+	// TODO increase/decrease bike speeds
 }
 
 void drawBikeAndWalls(Bike *bike) {
@@ -284,10 +295,6 @@ void drawScene() {
 ///// main /////
 
 int main() {
-	// init GLFW
-	glfwSetErrorCallback(error_callback);
-	if (!glfwInit()) exit(EXIT_FAILURE);
-
 	srand(time(NULL));
 	bikes.clear();
 	for (int i = 0; i < bikesNum; i++) {
@@ -297,27 +304,28 @@ int main() {
 
 	players[0] = new Player(0);
 	players[1] = new Player(1);
-	glfwSetWindowPos(players[1]->window, 700, 0);
+	players[0]->window->setPosition(sf::Vector2i(0, 0));
+	players[1]->window->setPosition(sf::Vector2i(650, 0));
+	players[0]->setControls(sf::Keyboard::A, sf::Keyboard::D);
+	players[1]->setControls(sf::Keyboard::Left, sf::Keyboard::Right);
 
 	newGame();
-	while (!glfwWindowShouldClose(players[0]->window) && !glfwWindowShouldClose(players[1]->window)) {
-		static double lastFrameSec = glfwGetTime();
-		float frameSec = glfwGetTime() - lastFrameSec;
-		lastFrameSec = glfwGetTime();
+	sf::Clock clock;
+	while (players[0]->window->isOpen() && players[1]->window->isOpen()) {
+		static double lastFrameSec = now(clock);
+		float frameSec = now(clock) - lastFrameSec;
+		lastFrameSec = now(clock);
 
 		///// game processing /////
 
 		// bike controls
 		aiTick(frameSec);
-		glfwPollEvents();
+		pollAllEvents();
 
 		for (int i = 0; i < bikes.size(); i++)
 			bikes.at(i)->move(frameSec);
 		collideAllBikes();
 		testForGameOver();
-
-		// TODO increase/decrease speed
-		//if (glfwGetKey(window, GLFW_KEY_UP)) {}
 
 		///// drawing /////
 
@@ -328,8 +336,8 @@ int main() {
 
 		static int frames = 0;
 		frames++;
-		static double lastSecond = glfwGetTime();
-		if (glfwGetTime() - lastSecond > 1) {
+		static double lastSecond = now(clock);
+		if (now(clock) - lastSecond > 1) {
 			// a second passed
 			lastSecond++;
 			printf("%3i fps\n", frames);
@@ -338,8 +346,7 @@ int main() {
 	}
 	delete players[0];
 	delete players[1];
-	glfwTerminate();
 
-	exit(EXIT_SUCCESS);
+	return EXIT_SUCCESS;
 }
 

@@ -1,54 +1,57 @@
 #include "Player.h"
 
-#include <GL/glu.h>
-#include <cstdlib>
-#include <vector>
-
+#include <SFML/OpenGL.hpp>
 #include "Settings.h"
 
-extern void keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods);
+extern void eventCallback(sf::Event);
 extern int goToLivingBike(int, bool);
 extern void drawScene();
 
 extern std::vector<Bike *> bikes;
 
-Player::Player(int bikeID) {
-	window = glfwCreateWindow(650, 500, "Lightcycles", NULL, NULL);
+Player::Player(int bikeIDArg) {
+	sf::ContextSettings cs;
+	cs.depthBits = 24;
+	window = new sf::Window(sf::VideoMode(650, 500), "Lightcycles", sf::Style::Default, cs);
+
 	if (!window) {
-		glfwTerminate();
 		exit(EXIT_FAILURE);
 	}
-	glfwSetKeyCallback(window, keyCallback);
-	glfwMakeContextCurrent(window);
+	window->setFramerateLimit(60);
+	window->setActive(true);
 	glEnable(GL_DEPTH_TEST);
 
+	bikeID = bikeIDArg;
 	viewedBikeID = bikeID;
-	bike = bikes.at(viewedBikeID);
+	controlKeyLeft = sf::Keyboard::Unknown;
+	controlKeyRight = sf::Keyboard::Unknown;
 	yRot = 0;
 }
 
 Player::~Player() {
-	glfwDestroyWindow(window);
+	delete window;
+}
+
+void Player::setControls(sf::Keyboard::Key left, sf::Keyboard::Key right) {
+	controlKeyLeft = left;
+	controlKeyRight = right;
+}
+
+void Player::onNewGame() {
+	viewedBikeID = bikeID;
 }
 
 void Player::turnBike(bool right) {
-	if (right) {
-		if (bike->isDying())
-			viewedBikeID = goToLivingBike(viewedBikeID, true);
-		else bike->turn(true);
-	}
-	else {
-		if (bike->isDying())
-			viewedBikeID = goToLivingBike(viewedBikeID, false);
-		else bike->turn(false);
-	}
+	Bike *bike = bikes.at(bikeID);
+	if (!bike->isDying()) bike->turn(right);
+	else viewedBikeID = goToLivingBike(viewedBikeID, right);
 }
 
 void Player::drawWindow() {
-	glfwMakeContextCurrent(window);
+	window->setActive(true);
 
-	static int windowWidth, windowHeight;
-	glfwGetFramebufferSize(window, &windowWidth, &windowHeight);
+	int windowWidth = window->getSize().x;
+	int windowHeight = window->getSize().y;
 	glViewport(0, 0, windowWidth, windowHeight);
 
 	glClearColor(0.5, 0.5, 1, 1);
@@ -100,6 +103,6 @@ void Player::drawWindow() {
 
 	///// finish rendering /////
 
-	glfwSwapBuffers(window);
+	window->display();
 }
 

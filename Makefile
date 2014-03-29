@@ -1,14 +1,19 @@
-run: bin/Lightcycles3D
-	@echo ===== Running Lightcycles3D ======================
-	@bin/Lightcycles3D
+run: bin/Client
+	@echo ===== Running Client =============================
+	@bin/Client
 	@echo ===== Done =======================================
 
-bin/Lightcycles3D: src/Lightcycles3D.cpp obj/Bike.o obj/Player.o
-	@echo ===== Compiling Lightcycles3D ====================
+bin/Client: obj/Client obj/Bike.o obj/Player.o
+	@echo ===== Linking Client =============================
 	@mkdir -p bin/
-	@g++ -o bin/Lightcycles3D src/Lightcycles3D.cpp obj/Bike.o obj/Player.o \
-		-lGL -lGLU -lglfw3 -lXrandr -lXi -lX11 -lXxf86vm -lpthread -std=c++11
-	@echo ===== Lightcycles3D compiled =====================
+	@g++ -o bin/Client obj/Client obj/Bike.o obj/Player.o -lsfml-window -lsfml-system -lGL -lGLU -lGLEW
+	@echo ===== Client linked ==============================
+
+obj/Client: src/Client.cpp
+	@echo ===== Compiling Client ===========================
+	@mkdir -p obj/
+	@g++ -o obj/Client -c src/Client.cpp -std=c++11
+	@echo ===== Client compiled ============================
 
 obj/Bike.o: src/Bike.h src/Bike.cpp
 	@echo ===== Compiling Bike =============================
@@ -24,4 +29,3 @@ obj/Player.o: src/Player.h src/Player.cpp
 
 clean:
 	@rm -rf bin/ obj/
-

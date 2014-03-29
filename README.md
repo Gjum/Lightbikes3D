@@ -7,6 +7,8 @@ Currently heavily under development, but `master` should be stable.
 
 To try it out, clone and `make run`.
 
+Client-server multiplayer is planned, and I would be happy to get some information about existing bots.
+
 Controls
 --------
 
@@ -15,11 +17,11 @@ Controls
 - `Enter` or `Space` starts a new game.
 - `Escape` or `Q` exits the game.
 
-Client-server multiplayer is planned.
+Dependencies
+------------
 
-I would be happy to get some information about existing bots.
-
-Have fun!
+- OpenGL 2.x
+- SFML 2.x (<http://sfml-dev.org/>)
 
 ---
 Licensed under the MIT license, see "LICENSE.txt".
