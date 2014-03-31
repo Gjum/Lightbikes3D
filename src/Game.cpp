@@ -100,7 +100,7 @@ bool Game::testForGameOver() {
 	int bikesLeft = 0;
 	int lastLivingBike = -1;
 	for (int i = 0; i < bikesInGame(); i++) {
-		if (!getBike(i)->isDying()) {
+		if (!getBike(i)->isDead()) {
 			bikesLeft++;
 			if (bikesLeft >= 2) return false ;
 			lastLivingBike = i;
@@ -108,41 +108,101 @@ bool Game::testForGameOver() {
 	}
 	// assume bikesLeft < 2
 	if (lastLivingBike == -1) printf("Tie!\n");
-	else printf("Bike %i wins!\n", lastLivingBike);
+	else printf("Bike %i wins! (%s)\n", lastLivingBike, (lastLivingBike%2 == 0) ? "Red" : "Blue");
 	return true;
 }
 
+bool Game::canGoForward(Bike *bike) {
+	if (bike->isDying()) return false;
+	Bike *ghost = new Bike(bike);
+	bike->wallHeight = 0; // simulate death to be ignored on collision tests
+	// move twice to avoid frontal crash with other bike
+	ghost->onPhysicsTick();
+	ghost->onPhysicsTick();
+	bool ret = !(collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
+	delete ghost;
+	bike->wallHeight = 1;
+	return ret;
+}
+
+bool Game::canTurn(Bike *bike, bool right) {
+	if (bike->isDying()) return false;
+	Bike *ghost = new Bike(bike);
+	bike->wallHeight = 0; // simulate death to be ignored on collision tests
+	// move twice to avoid frontal crash with other bike
+	ghost->turn(right);
+	ghost->onPhysicsTick();
+	ghost->onPhysicsTick();
+	bool ret = !(collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
+	delete ghost;
+	bike->wallHeight = 1;
+	return ret;
+}
+
+bool Game::preferredTurnSide(Bike *bike) {
+	if (bike->isDying()) return false;
+	bool right = random()%2 == 0; // 1:1 left or right, if both do not collide
+	Bike *bikeLeft = new Bike(bike);
+	Bike *bikeRight = new Bike(bike);
+	bikeLeft->turn(false);
+	bikeRight->turn(true);
+	// move away from each other
+	bikeLeft->onPhysicsTick();
+	bikeLeft->onPhysicsTick();
+	bikeLeft->onPhysicsTick();
+	bikeRight->onPhysicsTick();
+	bikeRight->onPhysicsTick();
+	bikeRight->onPhysicsTick();
+	for (int i = 0; i < 50; i++) {
+		bikeLeft->onPhysicsTick();
+		bikeRight->onPhysicsTick();
+		// left collides => turn right and vice versa
+		if (collideBikeWithEverything(bikeLeft) || bikeLeft->collideWithWalls(bikeLeft)) {
+			right = true;
+			break;
+		}
+		else if (collideBikeWithEverything(bikeRight) || bikeRight->collideWithWalls(bikeRight)) {
+			right = false;
+			break;
+		}
+	}
+	delete bikeLeft;
+	delete bikeRight;
+	return right;
+}
+
 void Game::aiTick() {
-	// TODO control the bots
+	static unsigned long ticksSinceTurn[bikesNum]; // uninitialized, so it's >0 but random
+	static unsigned long ticksSinceForcedTurn[bikesNum];
 	// start at 2, because 0 and 1 are the players
 	for (int i = 2; i < bikesInGame(); i++) {
+		ticksSinceTurn[i]++;
+		ticksSinceForcedTurn[i]++;
 		Bike *bike = getBike(i);
 		if (bike->isDying()) continue;
-		Bike *ghostA = new Bike(bike);
-		bike->wallHeight = 0; // simulate death to be ignored on collision tests
-		bool right, turn = false;
-		// move twice to avoid frontal crash with other bike
-		ghostA->onPhysicsTick();
-		ghostA->onPhysicsTick();
-		if (collideBikeWithEverything(ghostA) || ghostA->collideWithWalls(ghostA)) {
-			// bike is about to crash, but could dodge
+		bool turn = false;
+		bool right = preferredTurnSide(bike);
+		if (!canGoForward(bike)) { // bike is about to crash, but could dodge
+			ticksSinceForcedTurn[i] = 0;
 			turn = true;
-			right = true;
-			// TODO fix turning to random direction
-//			right = random()%2 == 0; // 1:1 left or right
-//			// is it safe to move into this direction?
-//			Bike *ghostB = new Bike(bike);
-//			ghostB->turn(right);
-//			ghostB->onPhysicsTick();
-//			if (collideBikeWithEverything(ghostB) || ghostB->collideWithWalls(ghostB)) {
-//				// no, it's not safe this way, turn the other way
-//				right = !right;
-//			}
-//			delete ghostB;
+			// is it safe to move into this direction?
+			if (!canTurn(bike, right)) {
+				right = !right;
+			}
 		}
-		delete ghostA;
+		else if (ticksSinceTurn[i] > 10
+				&& ticksSinceForcedTurn[i] > 100
+				&& random()%100 == 0) { // wander, i.e. randomly turn
+			turn = true;
+			if (!canTurn(bike, right)) {
+				right = !right;
+			}
+		}
 		bike->wallHeight = 1;
-		if (turn) bike->turn(right);
+		if (turn) {
+			bike->turn(right);
+			ticksSinceTurn[i] = 0;
+		}
 	}
 }
 

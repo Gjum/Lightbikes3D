@@ -23,6 +23,9 @@ class Game {
 
 		void collideAllBikes();
 		void killBike(int bikeID);
+		bool canGoForward(Bike *bike);
+		bool canTurn(Bike *bike, bool right);
+		bool preferredTurnSide(Bike *bike);
 		void aiTick();
 		void physicsTick();
 };
