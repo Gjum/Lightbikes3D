@@ -27,7 +27,7 @@ class Bike {
 
 		void resetWalls();
 		void setColor(float r, float g, float b);
-		void move(float sec);
+		void onPhysicsTick();
 		void turn(bool right);
 };
 

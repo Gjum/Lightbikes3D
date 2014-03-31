@@ -17,10 +17,13 @@ class Game {
 
 	private:
 		std::vector<Bike *> bikes;
+		float secondsToNextPhysicsTick;
 
 		void collideAllBikes();
 		void killBike(int bikeID);
 		bool testForGameOver();
+		void aiTick();
+		void physicsTick();
 };
 
 #endif // GAME_H

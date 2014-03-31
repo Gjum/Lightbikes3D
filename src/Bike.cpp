@@ -83,25 +83,25 @@ void Bike::setColor(float r, float g, float b) {
 	color[2] = b;
 }
 
-void Bike::move(float sec) {
+void Bike::onPhysicsTick() {
 	// do not move dying bikes, make walls smaller instead
 	if (isDying()) {
-		wallHeight = wallHeight - sec*wallShrinkSpeed;
+		wallHeight = wallHeight - physicsTickTime * wallShrinkSpeed;
 		if (wallHeight < 0) wallHeight = 0; // prevent overflow
 	}
 	else {
 		switch (direction) {
 			case 0:
-				pos.z -= sec * speed;
+				pos.z -= physicsTickTime * speed;
 				break;
 			case 1:
-				pos.x += sec * speed;
+				pos.x += physicsTickTime * speed;
 				break;
 			case 2:
-				pos.z += sec * speed;
+				pos.z += physicsTickTime * speed;
 				break;
 			case 3:
-				pos.x -= sec * speed;
+				pos.x -= physicsTickTime * speed;
 				break;
 		}
 	}

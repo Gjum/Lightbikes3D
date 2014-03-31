@@ -16,40 +16,6 @@ void newGame() {
 	players[1]->onNewGame();
 }
 
-void aiTick(float sec) {
-	// TODO control the bots
-	// start at 2, because 0 and 1 are the players
-	for (int i = 2; i < game->bikesInGame(); i++) {
-		Bike *bike = game->getBike(i);
-		if (bike->isDying()) continue;
-		Bike *ghostA = new Bike(bike);
-		bike->wallHeight = 0; // simulate death to be ignored on collision tests
-		bool right, turn = false;
-		// move twice to avoid frontal crash with other bike
-		ghostA->move(sec);
-		ghostA->move(sec);
-		if (game->collideBikeWithEverything(ghostA) || ghostA->collideWithWalls(ghostA)) {
-			// bike is about to crash, but could dodge
-			turn = true;
-			right = true;
-			// TODO fix turning to random direction
-//			right = random()%2 == 0; // 1:1 left or right
-//			// is it safe to move into this direction?
-//			Bike *ghostB = new Bike(bike);
-//			ghostB->turn(right);
-//			ghostB->move(sec);
-//			if (collideBikeWithEverything(ghostB) || ghostB->collideWithWalls(ghostB)) {
-//				// no, it's not safe this way, turn the other way
-//				right = !right;
-//			}
-//			delete ghostB;
-		}
-		delete ghostA;
-		bike->wallHeight = 1;
-		if (turn) bike->turn(right);
-	}
-}
-
 void pollEvents(sf::Window *window) {
 	sf::Event event;
 	while (window->pollEvent(event)) {
@@ -85,14 +51,12 @@ void pollEvents(sf::Window *window) {
 	}
 }
 
-void updateControls(float frameSec) {
+void updateControls() {
 	pollEvents(players[0]->window);
 	pollEvents(players[1]->window);
-	// TODO increase/decrease bike speeds
-	aiTick(frameSec);
 }
 
-void updateView(float frameSec) {
+void updateView() {
 	players[0]->drawWindow();
 	players[1]->drawWindow();
 }
@@ -127,10 +91,10 @@ int main() {
 	sf::Clock clock;
 	while (clientRunning) {
 		float frameSec = clock.restart().asMicroseconds() / 1000000.0;
-		updateControls(frameSec);
+		updateControls();
 		bool gameOver = game->onFrame(frameSec);
-		updateView(frameSec);
 		if (gameOver) newGame();
+		updateView();
 		printFps(frameSec);
 	}
 	delete players[0];
