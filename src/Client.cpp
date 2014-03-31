@@ -61,19 +61,6 @@ void updateView() {
 	players[1]->drawWindow();
 }
 
-void printFps(float frameSec) {
-	static int frames = 0;
-	frames++;
-	static float fpsAccumulator = 0;
-	fpsAccumulator += frameSec;
-	if (fpsAccumulator > 1) {
-		// a second passed
-		fpsAccumulator -= 1;
-		printf("%3i fps\n", frames);
-		frames = 0;
-	}
-}
-
 void initPlayers(Game *game) {
 	players[0] = new Player(game, 0);
 	players[1] = new Player(game, 1);
@@ -84,7 +71,6 @@ void initPlayers(Game *game) {
 }
 
 int main() {
-	srand(time(NULL));
 	game = new Game();
 	initPlayers(game);
 	newGame();
@@ -95,7 +81,6 @@ int main() {
 		bool gameOver = game->onFrame(frameSec);
 		if (gameOver) newGame();
 		updateView();
-		printFps(frameSec);
 	}
 	delete players[0];
 	delete players[1];

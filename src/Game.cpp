@@ -1,9 +1,12 @@
 #include "Game.h"
 
+#include <cstdlib>
 #include <cstdio>
+#include <ctime>
 #include "Settings.h"
 
 Game::Game() {
+	srand(time(NULL));
 	bikes.clear();
 	for (int i = 0; i < bikesNum; i++) {
 		Bike *bike = new Bike();
@@ -19,16 +22,14 @@ void Game::newGame() {
 	printf("Game restart\n");
 	for (int i = 0; i < bikesNum; i++) {
 		Bike *bike = getBike(i);
-		// TODO better bike initialization
-		bike->pos.x = mapSizeX * (i+1) / (bikesNum+1);
-		bike->pos.z = mapSizeZ - bikeRadius;
-		bike->direction = 0;
+		bike->pos.x = (mapSizeX - (4.0*bikeRadius * bikesNum/2.0)) / 2.0 + 2.0*bikeRadius * (i/2)*2;
+		bike->pos.z = (i%2) == 0 ? mapSizeZ - 5*bikeRadius : 5*bikeRadius;
+		bike->direction = (2*i) % 4;
 		bike->speed = defaultBikeSpeed;
 		bike->wallHeight = 1;
 		bike->resetWalls();
-		bike->setColor((i+1)   %2,
-		              ((i+1)/2)%2,
-		              ((i+1)/4)%2);
+		if (i%2 == 0) bike->setColor(1, (i/2)/(bikesNum/2.0), 0);
+		else bike->setColor(0, (i/2)/(bikesNum/2.0), 1);
 	}
 }
 
@@ -58,6 +59,14 @@ int Game::nextLivingBike(int start, bool next) {
 		newBikeID %= bikesInGame();
 	} while (getBike(newBikeID)->isDead());
 	return newBikeID;
+}
+
+bool Game::allBikesDead() {
+	for (int i = 0; i < bikesInGame(); i++) {
+		if (!getBike(i)->isDead())
+			return false;
+	}
+	return true;
 }
 
 bool Game::collideBikeWithEverything(Bike *bike) {

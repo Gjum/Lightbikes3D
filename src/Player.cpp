@@ -50,15 +50,15 @@ void Player::drawBikeAndWalls(Bike *bike) {
 
 		glBegin(GL_QUADS);
 
-		glVertex3f( 0.5, 1,  0.5);
-		glVertex3f(-0.5, 1,  0.5);
-		glVertex3f(-0.5, 1, -0.5);
-		glVertex3f( 0.5, 1, -0.5);
+		glVertex3f( bikeRadius, 1,  bikeRadius);
+		glVertex3f(-bikeRadius, 1,  bikeRadius);
+		glVertex3f(-bikeRadius, 1, -bikeRadius);
+		glVertex3f( bikeRadius, 1, -bikeRadius);
 
-		glVertex3f( 0.5, 0.001,  0.5);
-		glVertex3f(-0.5, 0.001,  0.5);
-		glVertex3f(-0.5, 0.001, -0.5);
-		glVertex3f( 0.5, 0.001, -0.5);
+		glVertex3f( bikeRadius, 0.001,  bikeRadius);
+		glVertex3f(-bikeRadius, 0.001,  bikeRadius);
+		glVertex3f(-bikeRadius, 0.001, -bikeRadius);
+		glVertex3f( bikeRadius, 0.001, -bikeRadius);
 
 		glEnd();
 
@@ -163,6 +163,12 @@ void Player::drawScene() {
 void Player::drawWindow() {
 	window->setActive(true);
 
+	Bike *viewedBike = game->getBike(viewedBikeID);
+	if (viewedBike->isDead()) {
+		viewedBikeID = game->nextLivingBike(viewedBikeID, true);
+		viewedBike = game->getBike(viewedBikeID);
+	}
+
 	int windowWidth = window->getSize().x;
 	int windowHeight = window->getSize().y;
 	glViewport(0, 0, windowWidth, windowHeight);
@@ -178,17 +184,18 @@ void Player::drawWindow() {
 
 	// smooth curves
 	// TODO do not turn smoothly when game restarts
-	const float targetRot = 90*game->getBike(viewedBikeID)->direction;
+	const float targetRot = 90*viewedBike->direction;
 	float deltaRot = targetRot - yRot;
 	while (deltaRot >  180) deltaRot -= 360;
 	while (deltaRot < -180) deltaRot += 360;
 	yRot += deltaRot/3.0;
 
-	glTranslatef(0, -viewHeight, -7); // a bit from the top
+	glTranslatef(0, -3, -8);
+	glRotatef(30, 1, 0, 0);
 	glRotatef(yRot, 0, 1, 0);
-	glTranslatef(-(game->getBike(viewedBikeID)->pos.x),
+	glTranslatef(-(viewedBike->pos.x),
 			-0,
-			-(game->getBike(viewedBikeID)->pos.z)); // from the position of the viewed bike
+			-(viewedBike->pos.z)); // from the position of the viewed bike
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();

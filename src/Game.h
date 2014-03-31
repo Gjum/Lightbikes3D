@@ -13,6 +13,8 @@ class Game {
 		int bikesInGame();
 		Bike *getBike(int bikeID);
 		int nextLivingBike(int start, bool next);
+		bool allBikesDead();
+		bool testForGameOver();
 		bool collideBikeWithEverything(Bike *bike);
 
 	private:
@@ -21,7 +23,6 @@ class Game {
 
 		void collideAllBikes();
 		void killBike(int bikeID);
-		bool testForGameOver();
 		void aiTick();
 		void physicsTick();
 };
