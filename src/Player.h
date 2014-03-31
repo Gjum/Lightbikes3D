@@ -3,16 +3,16 @@
 
 #include <SFML/Window.hpp>
 #include "Bike.h"
+#include "Game.h"
 
 class Player {
 	public:
 		sf::Window *window;
-		int viewedBikeID;
 		sf::Keyboard::Key
 			controlKeyLeft,
 			controlKeyRight;
 
-		Player(int bikeIDArg);
+		Player(Game *game, int bikeIDArg);
 		~Player();
 
 		void setControls(sf::Keyboard::Key left, sf::Keyboard::Key right);
@@ -21,8 +21,13 @@ class Player {
 		void drawWindow();
 
 	private:
-		int bikeID;
+		Game *game;
+		int bikeID, viewedBikeID;
 		float yRot;
+
+		void drawBikeAndWalls(Bike *bike);
+		void drawFloorAndBorders();
+		void drawScene();
 };
 
 #endif // PLAYER_H
