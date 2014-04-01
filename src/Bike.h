@@ -31,6 +31,9 @@ class Bike {
 		void setColor(float r, float g, float b);
 		void onPhysicsTick();
 		void turn(bool right);
+
+	private:
+		bool turnedThisTick;
 };
 
 #endif // BIKE_H

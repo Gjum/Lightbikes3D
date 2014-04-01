@@ -67,8 +67,12 @@ bool AiController::canTurn(bool right) {
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
-	// move twice to avoid frontal crash with other bike
 	ghost->turn(right);
+	// move twice to avoid frontal crash with other bike
+	ghost->onPhysicsTick();
+	ghost->onPhysicsTick();
+	// move even more to avoid dumb turns
+	ghost->onPhysicsTick();
 	ghost->onPhysicsTick();
 	ghost->onPhysicsTick();
 	bool ret = !(game->collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));

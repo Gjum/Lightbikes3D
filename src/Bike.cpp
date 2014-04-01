@@ -12,6 +12,7 @@ Bike::Bike() {
 	color[1] = 0;
 	color[2] = 1;
 	walls.clear();
+	turnedThisTick = false;
 }
 
 Bike::Bike(Bike *bike) {
@@ -106,10 +107,13 @@ void Bike::onPhysicsTick() {
 				break;
 		}
 	}
+	turnedThisTick = false;
 }
 
 void Bike::turn(bool right) {
+	if (turnedThisTick) return;
 	direction = (direction + (right ? 1 : 3)) % 4;
 	walls.push_back(pos);
+	turnedThisTick = true;
 }
 
