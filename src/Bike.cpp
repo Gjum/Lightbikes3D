@@ -1,8 +1,8 @@
 #include "Bike.h"
 #include "Settings.h"
 
-Bike::Bike() {
-	this->controller = 0;
+Bike::Bike(Controller *controller) {
+	this->controller = controller;
 	pos.x = 0;
 	pos.z = 0;
 	direction = 0;

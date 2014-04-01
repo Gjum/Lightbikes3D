@@ -6,7 +6,8 @@
 AiController::AiController(Game *game, int bikeID) {
 	srand(time(NULL));
 	this->game = game;
-	bike = game->getBike(bikeID);
+	this->bikeID = bikeID;
+	this->bike = NULL;
 }
 
 AiController::~AiController() {
@@ -16,6 +17,7 @@ void AiController::onNewGame() {
 }
 
 void AiController::updateControls() {
+	this->bike = game->getBike(bikeID);
 	if (bike->isDying()) return;
 	static unsigned long ticksSinceTurn = 0;
 	static unsigned long ticksSinceForcedTurn = 0;
@@ -51,6 +53,7 @@ void AiController::updateView(float frameSec) {
 }
 
 bool AiController::canGoForward() {
+	this->bike = game->getBike(bikeID);
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
@@ -64,6 +67,7 @@ bool AiController::canGoForward() {
 }
 
 bool AiController::canTurn(bool right) {
+	this->bike = game->getBike(bikeID);
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
@@ -82,6 +86,7 @@ bool AiController::canTurn(bool right) {
 }
 
 bool AiController::preferredTurnSide() {
+	this->bike = game->getBike(bikeID);
 	if (bike->isDying()) return false;
 	bool right = random()%2 == 0; // 1:1 left or right, if both do not collide
 	Bike *bikeLeft = new Bike(bike);

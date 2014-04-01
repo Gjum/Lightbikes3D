@@ -17,7 +17,7 @@ class Bike {
 		float color[3];
 		std::vector<Point> walls;
 
-		Bike();
+		Bike(Controller *controller);
 		Bike(Bike *bike);
 		~Bike();
 

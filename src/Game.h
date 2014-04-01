@@ -10,7 +10,7 @@ class Game {
 
 		void newGame();
 		bool onFrame(float frameSec);
-		bool playerWantsToJoin(Controller *controller);
+		void addController(Controller *controller);
 		void closeGame();
 
 		int bikesInGame();
@@ -24,7 +24,6 @@ class Game {
 		std::vector<Bike *> bikes;
 		float secondsToNextPhysicsTick;
 		bool gameClosed;
-		int numNonAiPlayers;
 
 		void collideAllBikes();
 		void killBike(int bikeID);

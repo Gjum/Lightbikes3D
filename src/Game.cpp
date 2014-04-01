@@ -1,67 +1,56 @@
 #include "Game.h"
 
 #include <cstdio>
-#include "AiController.h"
 #include "Settings.h"
 
 Game::Game() {
 	bikes.clear();
-	for (int i = 0; i < bikesNum; i++) {
-		Bike *bike = new Bike();
-		bikes.push_back(bike);
-		bike->controller = new AiController(this, i);
-	}
-	secondsToNextPhysicsTick = 0;
 	gameClosed = false;
-	numNonAiPlayers = 0;
 }
 
 Game::~Game() {
-	for (int i = 0; i < bikesNum; i++)
+	for (int i = 0; i < bikesInGame(); i++)
 		if (getBike(i)->controller != 0)
 			delete getBike(i)->controller;
 }
 
 void Game::newGame() {
 	printf("Game restart\n");
-	for (int i = 0; i < bikesNum; i++) {
+	for (int i = 0; i < bikesInGame(); i++) {
 		Bike *bike = getBike(i);
-		bike->pos.x = (mapSizeX - (4.0*bikeRadius * bikesNum/2.0)) / 2.0 + 2.0*bikeRadius * (i/2)*2;
+		bike->pos.x = (mapSizeX - (4.0*bikeRadius * bikesInGame()/2.0)) / 2.0 + 2.0*bikeRadius * (i/2)*2;
 		bike->pos.z = (i%2) == 0 ? mapSizeZ - 5*bikeRadius : 5*bikeRadius;
 		bike->direction = (2*i) % 4;
 		bike->speed = defaultBikeSpeed;
 		bike->wallHeight = 1;
 		bike->resetWalls();
-		if (i%2 == 0) bike->setColor(1, (i/2)/(bikesNum/2.0), 0);
-		else bike->setColor(0, (i/2)/(bikesNum/2.0), 1);
+		if (i%2 == 0) bike->setColor(1, (i/2)/(bikesInGame()/2.0), 0);
+		else bike->setColor(0, (i/2)/(bikesInGame()/2.0), 1);
 	}
 	for (int i = 0; i < bikesInGame(); i++)
 		if (getBike(i)->controller != 0)
 			getBike(i)->controller->onNewGame();
+	secondsToNextPhysicsTick = 0;
 }
 
 bool Game::onFrame(float frameSec) {
 	secondsToNextPhysicsTick -= frameSec;
 	while (secondsToNextPhysicsTick < 0) {
-		for (int i = 0; i < bikesNum; i++)
+		for (int i = 0; i < bikesInGame(); i++)
 			if (getBike(i)->controller != 0)
 				getBike(i)->controller->updateControls();
 		physicsTick();
 	}
-	for (int i = 0; i < bikesNum; i++)
+	for (int i = 0; i < bikesInGame(); i++)
 		if (getBike(i)->controller != 0)
 			getBike(i)->controller->updateView(frameSec);
 	if (testForGameOver()) newGame();
 	return gameClosed;
 }
 
-bool Game::playerWantsToJoin(Controller *controller) {
-	if (numNonAiPlayers >= bikesInGame()) return false;
-	if (getBike(numNonAiPlayers)->controller != 0)
-		delete getBike(numNonAiPlayers)->controller;
-	getBike(numNonAiPlayers)->controller = controller;
-	numNonAiPlayers++;
-	return true;
+void Game::addController(Controller *controller) {
+	Bike *bike = new Bike(controller);
+	bikes.push_back(bike);
 }
 
 void Game::closeGame() {

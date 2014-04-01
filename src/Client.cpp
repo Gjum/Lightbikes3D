@@ -2,6 +2,7 @@
 
 #include "Game.h"
 #include "Player.h"
+#include "AiController.h"
 
 void initPlayers(Game *game, Player **players) {
 	players[0] = new Player(game, 0, players);
@@ -10,10 +11,10 @@ void initPlayers(Game *game, Player **players) {
 	players[1]->window->setPosition(sf::Vector2i(650, 0));
 	players[0]->setControls(sf::Keyboard::A, sf::Keyboard::D);
 	players[1]->setControls(sf::Keyboard::Left, sf::Keyboard::Right);
-	if (!game->playerWantsToJoin((Controller *) players[0]))
-		delete players[0];
-	if (!game->playerWantsToJoin((Controller *) players[1]))
-		delete players[1];
+	game->addController((Controller *) players[0]);
+	game->addController((Controller *) players[1]);
+	for (int i = 2; i < 6; i++)
+		game->addController((Controller *) new AiController(game, i));
 }
 
 int main() {
@@ -27,6 +28,7 @@ int main() {
 		bool gameClosed = game->onFrame(frameSec);
 		if (gameClosed) break;
 	}
+	printf("Game closed. See you soon!\n");
 	delete game;
 	return EXIT_SUCCESS;
 }

@@ -17,6 +17,7 @@ class AiController: public Controller {
 	private:
 		Game *game;
 		Bike *bike;
+		int bikeID;
 
 		bool canGoForward();
 		bool canTurn(bool right);
