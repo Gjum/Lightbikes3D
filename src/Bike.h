@@ -2,6 +2,7 @@
 #define BIKE_H
 
 #include <vector>
+#include "Controller.h"
 
 struct Point {
 	float x, z;
@@ -9,6 +10,7 @@ struct Point {
 
 class Bike {
 	public:
+		Controller *controller;
 		Point pos;
 		char direction;
 		float wallHeight, speed;

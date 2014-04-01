@@ -1,21 +1,25 @@
 #include "Game.h"
 
-#include <cstdlib>
 #include <cstdio>
-#include <ctime>
+#include "AiController.h"
 #include "Settings.h"
 
 Game::Game() {
-	srand(time(NULL));
 	bikes.clear();
 	for (int i = 0; i < bikesNum; i++) {
 		Bike *bike = new Bike();
 		bikes.push_back(bike);
+		bike->controller = new AiController(this, i);
 	}
 	secondsToNextPhysicsTick = 0;
+	gameClosed = false;
+	numNonAiPlayers = 0;
 }
 
 Game::~Game() {
+	for (int i = 0; i < bikesNum; i++)
+		if (getBike(i)->controller != 0)
+			delete getBike(i)->controller;
 }
 
 void Game::newGame() {
@@ -31,12 +35,37 @@ void Game::newGame() {
 		if (i%2 == 0) bike->setColor(1, (i/2)/(bikesNum/2.0), 0);
 		else bike->setColor(0, (i/2)/(bikesNum/2.0), 1);
 	}
+	for (int i = 0; i < bikesInGame(); i++)
+		if (getBike(i)->controller != 0)
+			getBike(i)->controller->onNewGame();
 }
 
 bool Game::onFrame(float frameSec) {
 	secondsToNextPhysicsTick -= frameSec;
-	while (secondsToNextPhysicsTick < 0) physicsTick();
-	return testForGameOver();
+	while (secondsToNextPhysicsTick < 0) {
+		for (int i = 0; i < bikesNum; i++)
+			if (getBike(i)->controller != 0)
+				getBike(i)->controller->updateControls();
+		physicsTick();
+	}
+	for (int i = 0; i < bikesNum; i++)
+		if (getBike(i)->controller != 0)
+			getBike(i)->controller->updateView(frameSec);
+	if (testForGameOver()) newGame();
+	return gameClosed;
+}
+
+bool Game::playerWantsToJoin(Controller *controller) {
+	if (numNonAiPlayers >= bikesInGame()) return false;
+	if (getBike(numNonAiPlayers)->controller != 0)
+		delete getBike(numNonAiPlayers)->controller;
+	getBike(numNonAiPlayers)->controller = controller;
+	numNonAiPlayers++;
+	return true;
+}
+
+void Game::closeGame() {
+	gameClosed = true;
 }
 
 int Game::bikesInGame() {
@@ -112,103 +141,8 @@ bool Game::testForGameOver() {
 	return true;
 }
 
-bool Game::canGoForward(Bike *bike) {
-	if (bike->isDying()) return false;
-	Bike *ghost = new Bike(bike);
-	bike->wallHeight = 0; // simulate death to be ignored on collision tests
-	// move twice to avoid frontal crash with other bike
-	ghost->onPhysicsTick();
-	ghost->onPhysicsTick();
-	bool ret = !(collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
-	delete ghost;
-	bike->wallHeight = 1;
-	return ret;
-}
-
-bool Game::canTurn(Bike *bike, bool right) {
-	if (bike->isDying()) return false;
-	Bike *ghost = new Bike(bike);
-	bike->wallHeight = 0; // simulate death to be ignored on collision tests
-	// move twice to avoid frontal crash with other bike
-	ghost->turn(right);
-	ghost->onPhysicsTick();
-	ghost->onPhysicsTick();
-	bool ret = !(collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
-	delete ghost;
-	bike->wallHeight = 1;
-	return ret;
-}
-
-bool Game::preferredTurnSide(Bike *bike) {
-	if (bike->isDying()) return false;
-	bool right = random()%2 == 0; // 1:1 left or right, if both do not collide
-	Bike *bikeLeft = new Bike(bike);
-	Bike *bikeRight = new Bike(bike);
-	bikeLeft->turn(false);
-	bikeRight->turn(true);
-	// move away from each other
-	bikeLeft->onPhysicsTick();
-	bikeLeft->onPhysicsTick();
-	bikeLeft->onPhysicsTick();
-	bikeRight->onPhysicsTick();
-	bikeRight->onPhysicsTick();
-	bikeRight->onPhysicsTick();
-	for (int i = 0; i < 50; i++) {
-		bikeLeft->onPhysicsTick();
-		bikeRight->onPhysicsTick();
-		// left collides => turn right and vice versa
-		if (collideBikeWithEverything(bikeLeft) || bikeLeft->collideWithWalls(bikeLeft)) {
-			right = true;
-			break;
-		}
-		else if (collideBikeWithEverything(bikeRight) || bikeRight->collideWithWalls(bikeRight)) {
-			right = false;
-			break;
-		}
-	}
-	delete bikeLeft;
-	delete bikeRight;
-	return right;
-}
-
-void Game::aiTick() {
-	static unsigned long ticksSinceTurn[bikesNum]; // uninitialized, so it's >0 but random
-	static unsigned long ticksSinceForcedTurn[bikesNum];
-	// start at 2, because 0 and 1 are the players
-	for (int i = 2; i < bikesInGame(); i++) {
-		ticksSinceTurn[i]++;
-		ticksSinceForcedTurn[i]++;
-		Bike *bike = getBike(i);
-		if (bike->isDying()) continue;
-		bool turn = false;
-		bool right = preferredTurnSide(bike);
-		if (!canGoForward(bike)) { // bike is about to crash, but could dodge
-			ticksSinceForcedTurn[i] = 0;
-			turn = true;
-			// is it safe to move into this direction?
-			if (!canTurn(bike, right)) {
-				right = !right;
-			}
-		}
-		else if (ticksSinceTurn[i] > 10
-				&& ticksSinceForcedTurn[i] > 100
-				&& random()%100 == 0) { // wander, i.e. randomly turn
-			turn = true;
-			if (!canTurn(bike, right)) {
-				right = !right;
-			}
-		}
-		bike->wallHeight = 1;
-		if (turn) {
-			bike->turn(right);
-			ticksSinceTurn[i] = 0;
-		}
-	}
-}
-
 void Game::physicsTick() {
 	secondsToNextPhysicsTick += physicsTickTime;
-	aiTick();
 	for (int i = 0; i < bikesInGame(); i++)
 		getBike(i)->onPhysicsTick();
 	collideAllBikes();

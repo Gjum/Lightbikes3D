@@ -2,88 +2,32 @@
 
 #include "Game.h"
 #include "Player.h"
-#include "Bike.h"
-#include "Settings.h"
 
-Game *game;
-Player *players[2];
-bool clientRunning = true;
-
-void newGame() {
-	if (!clientRunning) return;
-	game->newGame();
-	players[0]->onNewGame();
-	players[1]->onNewGame();
-}
-
-void pollEvents(sf::Window *window) {
-	sf::Event event;
-	while (window->pollEvent(event)) {
-		switch (event.type) {
-			case sf::Event::KeyPressed:
-				switch (event.key.code) {
-					case sf::Keyboard::Space:
-					case sf::Keyboard::Return:
-						newGame();
-						break;
-					case sf::Keyboard::Escape:
-					case sf::Keyboard::Q:
-						clientRunning = false;
-						break;
-					default:
-						if (event.key.code == players[0]->controlKeyLeft)
-							players[0]->turnBike(false);
-						else if (event.key.code == players[0]->controlKeyRight)
-							players[0]->turnBike(true);
-						else if (event.key.code == players[1]->controlKeyLeft)
-							players[1]->turnBike(false);
-						else if (event.key.code == players[1]->controlKeyRight)
-							players[1]->turnBike(true);
-						break;
-				}
-				break;
-			case sf::Event::Closed:
-				printf("Window closed\n");
-				break;
-			default:
-				break;
-		}
-	}
-}
-
-void updateControls() {
-	pollEvents(players[0]->window);
-	pollEvents(players[1]->window);
-}
-
-void updateView() {
-	players[0]->drawWindow();
-	players[1]->drawWindow();
-}
-
-void initPlayers(Game *game) {
-	players[0] = new Player(game, 0);
-	players[1] = new Player(game, 1);
+void initPlayers(Game *game, Player **players) {
+	players[0] = new Player(game, 0, players);
+	players[1] = new Player(game, 1, players);
 	players[0]->window->setPosition(sf::Vector2i(0, 0));
 	players[1]->window->setPosition(sf::Vector2i(650, 0));
 	players[0]->setControls(sf::Keyboard::A, sf::Keyboard::D);
 	players[1]->setControls(sf::Keyboard::Left, sf::Keyboard::Right);
+	if (!game->playerWantsToJoin((Controller *) players[0]))
+		delete players[0];
+	if (!game->playerWantsToJoin((Controller *) players[1]))
+		delete players[1];
 }
 
 int main() {
-	game = new Game();
-	initPlayers(game);
-	newGame();
+	Game *game = new Game();
+	Player *players[2];
+	initPlayers(game, players);
+	game->newGame();
 	sf::Clock clock;
-	while (clientRunning) {
+	while (true) {
 		float frameSec = clock.restart().asMicroseconds() / 1000000.0;
-		updateControls();
-		bool gameOver = game->onFrame(frameSec);
-		if (gameOver) newGame();
-		updateView();
+		bool gameClosed = game->onFrame(frameSec);
+		if (gameClosed) break;
 	}
-	delete players[0];
-	delete players[1];
+	delete game;
 	return EXIT_SUCCESS;
 }
 

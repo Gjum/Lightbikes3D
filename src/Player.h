@@ -4,24 +4,27 @@
 #include <SFML/Window.hpp>
 #include "Bike.h"
 #include "Game.h"
+#include "Controller.h"
 
-class Player {
+class Player: public Controller {
 	public:
 		sf::Window *window;
 		sf::Keyboard::Key
 			controlKeyLeft,
 			controlKeyRight;
 
-		Player(Game *game, int bikeIDArg);
+		Player(Game *game, int bikeID, Player **players);
 		~Player();
 
 		void setControls(sf::Keyboard::Key left, sf::Keyboard::Key right);
 		void onNewGame();
 		void turnBike(bool right);
-		void drawWindow();
+		void updateControls();
+		void updateView(float frameSec);
 
 	private:
 		Game *game;
+		Player **players;
 		int bikeID, viewedBikeID;
 		float yRot;
 

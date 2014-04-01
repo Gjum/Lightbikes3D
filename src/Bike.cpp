@@ -2,6 +2,7 @@
 #include "Settings.h"
 
 Bike::Bike() {
+	this->controller = 0;
 	pos.x = 0;
 	pos.z = 0;
 	direction = 0;

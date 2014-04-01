@@ -3,8 +3,11 @@
 #include <SFML/OpenGL.hpp>
 #include "Settings.h"
 
-Player::Player(Game *game, int bikeIDArg) {
+Player::Player(Game *game, int bikeID, Player **players) {
 	this->game = game;
+	this->bikeID = bikeID;
+	this->players = players;
+
 	sf::ContextSettings cs;
 	cs.depthBits = 24;
 	window = new sf::Window(sf::VideoMode(650, 500), "Lightcycles", sf::Style::Default, cs);
@@ -14,7 +17,6 @@ Player::Player(Game *game, int bikeIDArg) {
 	window->setActive(true);
 	glEnable(GL_DEPTH_TEST);
 
-	bikeID = bikeIDArg;
 	viewedBikeID = bikeID;
 	controlKeyLeft = sf::Keyboard::Unknown;
 	controlKeyRight = sf::Keyboard::Unknown;
@@ -39,6 +41,41 @@ void Player::turnBike(bool right) {
 	Bike *bike = game->getBike(bikeID);
 	if (!bike->isDying()) bike->turn(right);
 	else viewedBikeID = game->nextLivingBike(viewedBikeID, right);
+}
+
+void Player::updateControls() {
+	sf::Event event;
+	while (window->pollEvent(event)) {
+		switch (event.type) {
+			case sf::Event::KeyPressed:
+				switch (event.key.code) {
+					case sf::Keyboard::Space:
+					case sf::Keyboard::Return:
+						game->newGame();
+						break;
+					case sf::Keyboard::Escape:
+					case sf::Keyboard::Q:
+						game->closeGame();
+						break;
+					default:
+						if (event.key.code == players[0]->controlKeyLeft)
+							players[0]->turnBike(false);
+						else if (event.key.code == players[0]->controlKeyRight)
+							players[0]->turnBike(true);
+						else if (event.key.code == players[1]->controlKeyLeft)
+							players[1]->turnBike(false);
+						else if (event.key.code == players[1]->controlKeyRight)
+							players[1]->turnBike(true);
+						break;
+				}
+				break;
+			case sf::Event::Closed:
+				game->closeGame();
+				break;
+			default:
+				break;
+		}
+	}
 }
 
 void Player::drawBikeAndWalls(Bike *bike) {
@@ -160,7 +197,7 @@ void Player::drawScene() {
 	drawFloorAndBorders();
 }
 
-void Player::drawWindow() {
+void Player::updateView(float frameSec) {
 	window->setActive(true);
 
 	Bike *viewedBike = game->getBike(viewedBikeID);

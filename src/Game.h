@@ -10,6 +10,9 @@ class Game {
 
 		void newGame();
 		bool onFrame(float frameSec);
+		bool playerWantsToJoin(Controller *controller);
+		void closeGame();
+
 		int bikesInGame();
 		Bike *getBike(int bikeID);
 		int nextLivingBike(int start, bool next);
@@ -20,13 +23,11 @@ class Game {
 	private:
 		std::vector<Bike *> bikes;
 		float secondsToNextPhysicsTick;
+		bool gameClosed;
+		int numNonAiPlayers;
 
 		void collideAllBikes();
 		void killBike(int bikeID);
-		bool canGoForward(Bike *bike);
-		bool canTurn(Bike *bike, bool right);
-		bool preferredTurnSide(Bike *bike);
-		void aiTick();
 		void physicsTick();
 };
 
