@@ -1,9 +1,12 @@
+/* Player.h
+ * Handles a window and keyboard inputs to control a bike.
+ */
 #ifndef PLAYER_H
 #define PLAYER_H
 
 #include <SFML/Window.hpp>
 #include "Bike.h"
-#include "Game.h"
+#include "GameInterface.h"
 #include "Controller.h"
 
 class Player: public Controller {
@@ -13,7 +16,7 @@ class Player: public Controller {
 			controlKeyLeft,
 			controlKeyRight;
 
-		Player(Game *game, int bikeID, Player **players);
+		Player(GameInterface *game, int controllerID, Player **players);
 		~Player();
 
 		void setControls(sf::Keyboard::Key left, sf::Keyboard::Key right);
@@ -23,9 +26,9 @@ class Player: public Controller {
 		void updateView(float frameSec);
 
 	private:
-		Game *game;
+		GameInterface *game;
 		Player **players;
-		int bikeID, viewedBikeID;
+		int controllerID, viewedBikeID;
 		float yRot;
 		bool turnedThisTick;
 

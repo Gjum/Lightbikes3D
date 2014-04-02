@@ -1,3 +1,6 @@
+/* Collision.h
+ * Provides useful data structures and functions for AABB collision.
+ */
 #ifndef COLLISION_H
 #define COLLISION_H
 

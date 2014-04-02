@@ -1,3 +1,6 @@
+/* Bike.h
+ * Contains the state of a Lightcycle and provides methods to change it.
+ */
 #ifndef BIKE_H
 #define BIKE_H
 

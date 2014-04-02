@@ -1,3 +1,6 @@
+/* Controller.h
+ * Base class to define the interface for bike-controlling classes.
+ */
 #ifndef CONTROLLER_H
 #define CONTROLLER_H
 

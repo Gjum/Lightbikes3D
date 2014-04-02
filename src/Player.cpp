@@ -1,11 +1,11 @@
 #include "Player.h"
 
 #include <SFML/OpenGL.hpp>
-#include "Settings.h"
+#include "SettingsGame.h"
 
-Player::Player(Game *game, int bikeID, Player **players) {
+Player::Player(GameInterface *game, int controllerID, Player **players) {
 	this->game = game;
-	this->bikeID = bikeID;
+	this->controllerID = controllerID;
 	this->players = players;
 
 	sf::ContextSettings cs;
@@ -17,7 +17,7 @@ Player::Player(Game *game, int bikeID, Player **players) {
 	window->setActive(true);
 	glEnable(GL_DEPTH_TEST);
 
-	viewedBikeID = bikeID;
+	viewedBikeID = controllerID;
 	controlKeyLeft = sf::Keyboard::Unknown;
 	controlKeyRight = sf::Keyboard::Unknown;
 	yRot = 0;
@@ -34,11 +34,11 @@ void Player::setControls(sf::Keyboard::Key left, sf::Keyboard::Key right) {
 }
 
 void Player::onNewGame() {
-	viewedBikeID = bikeID;
+	viewedBikeID = controllerID;
 }
 
 bool Player::canTurn(bool right) {
-	Bike *bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
@@ -52,7 +52,7 @@ bool Player::canTurn(bool right) {
 }
 
 bool Player::canGoForward() {
-	Bike *bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
@@ -65,12 +65,12 @@ bool Player::canGoForward() {
 }
 
 void Player::turnBike(bool right) {
-	Bike *bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying())
-		viewedBikeID = game->nextLivingBike(viewedBikeID, right);
+		viewedBikeID = game->nextLivingController(viewedBikeID, right);
 	else if (canTurn(right)) {
 		// prevent impossible turns
-		bike->turn(right);
+		game->turnBike(controllerID, right);
 		turnedThisTick = true;
 	}
 }
@@ -110,7 +110,7 @@ void Player::updateControls() {
 		}
 	}
 	// prevent frontal crashing
-	if (!game->getBike(bikeID)->isDying() && !turnedThisTick && !canGoForward()) {
+	if (!game->getBike(controllerID)->isDying() && !turnedThisTick && !canGoForward()) {
 		turnBike(canTurn(true));
 	}
 }
@@ -222,7 +222,7 @@ void Player::drawFloorAndBorders() {
 }
 
 void Player::drawScene() {
-	for (int i = 0; i < game->bikesInGame(); i++)
+	for (int i = 0; i < game->controllersInGame(); i++)
 		drawBikeAndWalls(game->getBike(i));
 	drawFloorAndBorders();
 }
@@ -232,7 +232,7 @@ void Player::updateView(float frameSec) {
 
 	Bike *viewedBike = game->getBike(viewedBikeID);
 	if (viewedBike->isDead()) {
-		viewedBikeID = game->nextLivingBike(viewedBikeID, true);
+		viewedBikeID = game->nextLivingController(viewedBikeID, true);
 		viewedBike = game->getBike(viewedBikeID);
 	}
 

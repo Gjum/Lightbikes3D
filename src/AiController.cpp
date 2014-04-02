@@ -2,13 +2,12 @@
 
 #include <cstdlib>
 #include <ctime>
-#include "Settings.h"
+#include "SettingsGame.h"
 
-AiController::AiController(Game *game, int bikeID) {
+AiController::AiController(Game *game, int controllerID) {
 	srand(time(NULL));
 	this->game = game;
-	this->bikeID = bikeID;
-	this->bike = NULL;
+	this->controllerID = controllerID;
 }
 
 AiController::~AiController() {
@@ -18,7 +17,7 @@ void AiController::onNewGame() {
 }
 
 void AiController::updateControls() {
-	this->bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying()) return;
 	static unsigned long ticksSinceTurn = 0;
 	static unsigned long ticksSinceForcedTurn = 0;
@@ -44,7 +43,7 @@ void AiController::updateControls() {
 	}
 	bike->wallHeight = 1;
 	if (turn) {
-		bike->turn(right);
+		game->turnBike(controllerID, right);
 		ticksSinceTurn = 0;
 	}
 }
@@ -54,7 +53,7 @@ void AiController::updateView(float frameSec) {
 }
 
 bool AiController::canGoForward() {
-	this->bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
@@ -68,7 +67,7 @@ bool AiController::canGoForward() {
 }
 
 bool AiController::canTurn(bool right) {
-	this->bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying()) return false;
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
@@ -81,7 +80,7 @@ bool AiController::canTurn(bool right) {
 }
 
 bool AiController::preferredTurnSide() {
-	this->bike = game->getBike(bikeID);
+	Bike *bike = game->getBike(controllerID);
 	if (bike->isDying()) return false;
 	bool right = random()%2 == 0; // 1:1 left or right, if both do not collide
 	Bike *bikeLeft = new Bike(bike);

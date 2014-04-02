@@ -1,3 +1,6 @@
+/* AiController.h
+ * Controls a player by Artifical Intelligence.
+ */
 #ifndef AI_CONTROLLER_H
 #define AI_CONTROLLER_H
 
@@ -7,7 +10,7 @@
 
 class AiController: public Controller {
 	public:
-		AiController(Game *game, int bikeID);
+		AiController(Game *game, int controllerID);
 		~AiController();
 
 		void onNewGame();
@@ -16,8 +19,7 @@ class AiController: public Controller {
 
 	private:
 		Game *game;
-		Bike *bike;
-		int bikeID;
+		int controllerID;
 
 		bool canGoForward();
 		bool canTurn(bool right);

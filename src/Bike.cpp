@@ -1,5 +1,5 @@
 #include "Bike.h"
-#include "Settings.h"
+#include "SettingsGame.h"
 #include <cstdio>
 
 Bike::Bike(Controller *controller) {

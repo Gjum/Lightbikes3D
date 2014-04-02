@@ -1,22 +1,30 @@
+/* Game.h
+ * Holds all bikes and advances them every tick as the game runs. Also handles game start/end, player join/disconnect etc.
+ */
 #ifndef GAME_H
 #define GAME_H
 
 #include "Bike.h"
+#include "GameInterface.h"
 
-class Game {
+class Game: public GameInterface {
 	public:
 		Game();
 		~Game();
 
+		// controlling game state
 		void newGame();
-		bool onFrame(float frameSec);
-		void addController(Controller *controller);
 		void closeGame();
+		int addController(Controller *controller);
+		void removeController(int controllerID);
+		int controllersInGame();
 
-		int bikesInGame();
-		Bike *getBike(int bikeID);
-		int nextLivingBike(int start, bool next);
-		bool allBikesDead();
+		// during game
+		bool onFrame(float frameSec);
+		void turnBike(int controllerID, bool right);
+		Bike *getBike(int controllerID);
+		int nextLivingController(int start, bool next);
+		bool allControllersDead();
 		bool testForGameOver();
 		bool collideBikeWithEverything(Bike *bike);
 
@@ -26,7 +34,7 @@ class Game {
 		bool gameClosed;
 
 		void collideAllBikes();
-		void killBike(int bikeID);
+		void killBike(int controllerID);
 		void physicsTick();
 };
 
