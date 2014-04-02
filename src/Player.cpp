@@ -116,9 +116,9 @@ void Player::updateControls() {
 }
 
 void Player::drawBikeAndWalls(Bike *bike) {
-	glColor3fv(bike->color);
 	// TODO fancy bike
 	if (!bike->isDying()) {
+		glColor3fv(bike->color);
 		glPushMatrix();
 		glTranslatef(bike->pos.x, 0, bike->pos.z);
 
@@ -140,49 +140,42 @@ void Player::drawBikeAndWalls(Bike *bike) {
 	}
 	// walls
 	if (!bike->isDead()) {
+		float h = bike->wallHeight;
+		glColor3f(bike->color[0] + (1-h),
+		          bike->color[1] + (1-h),
+		          bike->color[2] + (1-h));
+
 		glBegin(GL_QUADS);
 
-		Point wa = bike->pos, wb;
 		for (int i = bike->walls.size() - 1; i >= 0; i--) {
-			wb = bike->walls.at(i);
-			float ww = ((wa.x < wb.x) ? wa.x : wb.x) - wallRadius; // west
-			float we = ((wa.x > wb.x) ? wa.x : wb.x) + wallRadius; // east
-			float wn = ((wa.z < wb.z) ? wa.z : wb.z) - wallRadius; // north
-			float ws = ((wa.z > wb.z) ? wa.z : wb.z) + wallRadius; // south
+			Box wb = bike->getWallBox(i);
 
-			float bh = bike->wallHeight;
-
+			// wall sides
 			// western wall
-			glVertex3f(ww,  0, wn);
-			glVertex3f(ww, bh, wn);
-			glVertex3f(ww, bh, ws);
-			glVertex3f(ww,  0, ws);
-
+			glVertex3f(wb.w, 0, wb.n);
+			glVertex3f(wb.w, h, wb.n);
+			glVertex3f(wb.w, h, wb.s);
+			glVertex3f(wb.w, 0, wb.s);
 			// eastern wall
-			glVertex3f(we,  0, wn);
-			glVertex3f(we, bh, wn);
-			glVertex3f(we, bh, ws);
-			glVertex3f(we,  0, ws);
-
+			glVertex3f(wb.e, 0, wb.n);
+			glVertex3f(wb.e, h, wb.n);
+			glVertex3f(wb.e, h, wb.s);
+			glVertex3f(wb.e, 0, wb.s);
 			// northern wall
-			glVertex3f(ww,  0, wn);
-			glVertex3f(ww, bh, wn);
-			glVertex3f(we, bh, wn);
-			glVertex3f(we,  0, wn);
-
+			glVertex3f(wb.w, 0, wb.n);
+			glVertex3f(wb.w, h, wb.n);
+			glVertex3f(wb.e, h, wb.n);
+			glVertex3f(wb.e, 0, wb.n);
 			// southern wall
-			glVertex3f(ww,  0, ws);
-			glVertex3f(ww, bh, ws);
-			glVertex3f(we, bh, ws);
-			glVertex3f(we,  0, ws);
-
+			glVertex3f(wb.w, 0, wb.s);
+			glVertex3f(wb.w, h, wb.s);
+			glVertex3f(wb.e, h, wb.s);
+			glVertex3f(wb.e, 0, wb.s);
 			// top of the wall
-			glVertex3f(ww, bh, wn);
-			glVertex3f(ww, bh, ws);
-			glVertex3f(we, bh, ws);
-			glVertex3f(we, bh, wn);
-
-			wa = wb;
+			glVertex3f(wb.w, h, wb.n);
+			glVertex3f(wb.w, h, wb.s);
+			glVertex3f(wb.e, h, wb.s);
+			glVertex3f(wb.e, h, wb.n);
 		}
 
 		glEnd();
@@ -265,11 +258,11 @@ void Player::updateView(float frameSec) {
 	yRot += deltaRot/3.0;
 
 	glTranslatef(0, -3, -8);
-	glRotatef(30, 1, 0, 0);
+	glRotatef(40, 1, 0, 0);
 	glRotatef(yRot, 0, 1, 0);
 	glTranslatef(-(viewedBike->pos.x),
-			-0,
-			-(viewedBike->pos.z)); // from the position of the viewed bike
+	             -0,
+	             -(viewedBike->pos.z)); // from the position of the viewed bike
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
@@ -285,11 +278,9 @@ void Player::updateView(float frameSec) {
 			windowHeight, // top
 			0.1,          // near
 			100);         // far
-	glRotatef(90, 1, 0, 0);
-	glTranslatef(-0, -2, -windowHeight);
-	glScalef(windowWidth / 4 / mapSizeX,
-			1,
-			windowWidth / 4 / mapSizeX);
+	glRotatef(90, 1, 0, 0); // look down
+	glTranslatef(-0, -2, -windowHeight); // make visible and move to the top left
+	glScalef(.5/wallRadius, 1, .5/wallRadius); // one pixel per wall width
 
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
