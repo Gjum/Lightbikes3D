@@ -2,6 +2,7 @@
 
 #include <cstdlib>
 #include <ctime>
+#include "Settings.h"
 
 AiController::AiController(Game *game, int bikeID) {
 	srand(time(NULL));
@@ -72,13 +73,7 @@ bool AiController::canTurn(bool right) {
 	Bike *ghost = new Bike(bike);
 	bike->wallHeight = 0; // simulate death to be ignored on collision tests
 	ghost->turn(right);
-	// move twice to avoid frontal crash with other bike
-	ghost->onPhysicsTick();
-	ghost->onPhysicsTick();
-	// move even more to avoid dumb turns
-	ghost->onPhysicsTick();
-	ghost->onPhysicsTick();
-	ghost->onPhysicsTick();
+	ghost->move(bikeRadius);
 	bool ret = !(game->collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
 	delete ghost;
 	bike->wallHeight = 1;
@@ -94,15 +89,11 @@ bool AiController::preferredTurnSide() {
 	bikeLeft->turn(false);
 	bikeRight->turn(true);
 	// move away from each other
-	bikeLeft->onPhysicsTick();
-	bikeLeft->onPhysicsTick();
-	bikeLeft->onPhysicsTick();
-	bikeRight->onPhysicsTick();
-	bikeRight->onPhysicsTick();
-	bikeRight->onPhysicsTick();
+	bikeLeft->move(bikeRadius);
+	bikeRight->move(bikeRadius);
 	for (int i = 0; i < 50; i++) {
-		bikeLeft->onPhysicsTick();
-		bikeRight->onPhysicsTick();
+		bikeLeft->move(bikeRadius);
+		bikeRight->move(bikeRadius);
 		// left collides => turn right and vice versa
 		if (game->collideBikeWithEverything(bikeLeft) || bikeLeft->collideWithWalls(bikeLeft)) {
 			right = true;

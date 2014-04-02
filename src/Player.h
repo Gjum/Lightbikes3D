@@ -27,7 +27,10 @@ class Player: public Controller {
 		Player **players;
 		int bikeID, viewedBikeID;
 		float yRot;
+		bool turnedThisTick;
 
+		bool canTurn(bool right);
+		bool canGoForward();
 		void drawBikeAndWalls(Bike *bike);
 		void drawFloorAndBorders();
 		void drawScene();

@@ -3,12 +3,19 @@ run: bin/Client
 	@bin/Client
 	@echo ===== Done =======================================
 
-bin/Client: obj/Client obj/Bike.o obj/Controller.o obj/Player.o obj/AiController.o obj/Game.o
+clean:
+	@rm -rf bin/ obj/
+
+##### bin #####
+
+bin/Client: obj/Client obj/Bike.o obj/Controller.o obj/Player.o obj/AiController.o obj/Game.o obj/Collision.o
 	@echo ===== Linking Client =============================
 	@mkdir -p bin/
-	@g++ -o bin/Client obj/Client obj/Bike.o obj/Controller.o obj/Player.o obj/AiController.o obj/Game.o \
+	@g++ -o bin/Client obj/Client obj/Bike.o obj/Controller.o obj/Player.o obj/AiController.o obj/Game.o obj/Collision.o \
 		-lsfml-window -lsfml-system -lGL -lGLU -lGLEW
 	@echo ===== Client linked ==============================
+
+##### obj ###
 
 obj/Client: src/Client.cpp src/Settings.h
 	@echo ===== Compiling Client ===========================
@@ -46,5 +53,8 @@ obj/Game.o: src/Game.h src/Game.cpp src/Settings.h src/Bike.h
 	@g++ -o obj/Game.o -c src/Game.cpp -std=c++11
 	@echo ===== Game compiled ==============================
 
-clean:
-	@rm -rf bin/ obj/
+obj/Collision.o: src/Collision.h src/Collision.cpp
+	@echo ===== Compiling Collision ========================
+	@mkdir -p obj/
+	@g++ -g -o obj/Collision.o -c src/Collision.cpp -std=c++11
+	@echo ===== Collision compiled =========================

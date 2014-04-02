@@ -37,13 +37,46 @@ void Player::onNewGame() {
 	viewedBikeID = bikeID;
 }
 
+bool Player::canTurn(bool right) {
+	Bike *bike = game->getBike(bikeID);
+	if (bike->isDying()) return false;
+	Bike *ghost = new Bike(bike);
+	bike->wallHeight = 0; // simulate death to be ignored on collision tests
+	ghost->turn(right);
+	ghost->onPhysicsTick();
+	ghost->onPhysicsTick();
+	bool ret = !(game->collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
+	delete ghost;
+	bike->wallHeight = 1;
+	return ret;
+}
+
+bool Player::canGoForward() {
+	Bike *bike = game->getBike(bikeID);
+	if (bike->isDying()) return false;
+	Bike *ghost = new Bike(bike);
+	bike->wallHeight = 0; // simulate death to be ignored on collision tests
+	ghost->onPhysicsTick();
+	ghost->onPhysicsTick();
+	bool ret = !(game->collideBikeWithEverything(ghost) || ghost->collideWithWalls(ghost));
+	delete ghost;
+	bike->wallHeight = 1;
+	return ret;
+}
+
 void Player::turnBike(bool right) {
 	Bike *bike = game->getBike(bikeID);
-	if (!bike->isDying()) bike->turn(right);
-	else viewedBikeID = game->nextLivingBike(viewedBikeID, right);
+	if (bike->isDying())
+		viewedBikeID = game->nextLivingBike(viewedBikeID, right);
+	else if (canTurn(right)) {
+		// prevent impossible turns
+		bike->turn(right);
+		turnedThisTick = true;
+	}
 }
 
 void Player::updateControls() {
+	turnedThisTick = false;
 	sf::Event event;
 	while (window->pollEvent(event)) {
 		switch (event.type) {
@@ -75,6 +108,10 @@ void Player::updateControls() {
 			default:
 				break;
 		}
+	}
+	// prevent frontal crashing
+	if (!game->getBike(bikeID)->isDying() && !turnedThisTick && !canGoForward()) {
+		turnBike(canTurn(true));
 	}
 }
 

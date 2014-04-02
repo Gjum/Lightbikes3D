@@ -1,5 +1,6 @@
 #include "Bike.h"
 #include "Settings.h"
+#include <cstdio>
 
 Bike::Bike(Controller *controller) {
 	this->controller = controller;
@@ -12,7 +13,6 @@ Bike::Bike(Controller *controller) {
 	color[1] = 0;
 	color[2] = 1;
 	walls.clear();
-	turnedThisTick = false;
 }
 
 Bike::Bike(Bike *bike) {
@@ -36,33 +36,43 @@ bool Bike::isDead() {
 	return wallHeight <= 0;
 }
 
+Box Bike::getWallBox(int i) {
+	Box box;
+	if (i < 0 || i >= walls.size()) {
+		printf("ERROR: Bike collision test: Invalid wall index %i\n", i);
+		return box;
+	}
+	Point a = (i >= walls.size()-1) ? pos : walls.at(i+1);
+	Point b = walls.at(i);
+	box.w = (a.x < b.x ? a.x : b.x) - wallRadius;
+	box.e = (a.x > b.x ? a.x : b.x) + wallRadius;
+	box.n = (a.z < b.z ? a.z : b.z) - wallRadius;
+	box.s = (a.z > b.z ? a.z : b.z) + wallRadius;
+	return box;
+}
+
+Box Bike::getBikeBox() {
+	Box b;
+	b.w = pos.x - bikeRadius;
+	b.e = pos.x + bikeRadius;
+	b.n = pos.z - bikeRadius;
+	b.s = pos.z + bikeRadius;
+	return b;
+}
+
 bool Bike::collideWithBike(Bike *otherBike) {
-	// TODO collideWithBike
-	// TODO print debugging message when colliding bike with itself
-	return false;
+	if (this == otherBike) {
+		printf("ERROR: Colliding bike with itself\n");
+		return false;
+	}
+	return collideBoxes(getBikeBox(), otherBike->getBikeBox());
 }
 
 bool Bike::collideWithWalls(Bike *otherBike) {
-	Point wa, wb;
-	float bw = pos.x - bikeRadius; // west
-	float be = pos.x + bikeRadius; // east
-	float bn = pos.z - bikeRadius; // north
-	float bs = pos.z + bikeRadius; // south
-	// do not collide with the two newest walls if bike == otherBike
-	if (this == otherBike) {
-		if (otherBike->walls.size() < 3) return false;
-		wa = otherBike->walls.at(otherBike->walls.size() - 2); // start at third-newest wall
-	}
-	else wa = otherBike->pos;
-	for (int i = otherBike->walls.size() - (this == otherBike ? 3 : 1); i >= 0; i--) {
-		wb = otherBike->walls.at(i);
-		float ww = ((wa.x < wb.x) ? wa.x : wb.x) - wallRadius; // west
-		float we = ((wa.x > wb.x) ? wa.x : wb.x) + wallRadius; // east
-		float wn = ((wa.z < wb.z) ? wa.z : wb.z) - wallRadius; // north
-		float ws = ((wa.z > wb.z) ? wa.z : wb.z) + wallRadius; // south
-		if (ww <= be && we >= bw && wn <= bs && ws >= bn)
+	for (int i = otherBike->walls.size()-1; i >= 0; i--) {
+		if (this == otherBike && i > (int)walls.size() - 3) continue;
+		if (collideBoxes(getBikeBox(), otherBike->getWallBox(i)))
 			return true;
-		wa = wb;
 	}
 	return false;
 }
@@ -85,35 +95,35 @@ void Bike::setColor(float r, float g, float b) {
 	color[2] = b;
 }
 
+void Bike::move(float units) {
+	direction %= 4;
+	switch (direction) {
+		case 0:
+			pos.z -= units;
+			break;
+		case 1:
+			pos.x += units;
+			break;
+		case 2:
+			pos.z += units;
+			break;
+		case 3:
+			pos.x -= units;
+			break;
+	}
+}
+
 void Bike::onPhysicsTick() {
 	// do not move dying bikes, make walls smaller instead
 	if (isDying()) {
 		wallHeight = wallHeight - physicsTickTime * wallShrinkSpeed;
 		if (wallHeight < 0) wallHeight = 0; // prevent overflow
 	}
-	else {
-		switch (direction) {
-			case 0:
-				pos.z -= physicsTickTime * speed;
-				break;
-			case 1:
-				pos.x += physicsTickTime * speed;
-				break;
-			case 2:
-				pos.z += physicsTickTime * speed;
-				break;
-			case 3:
-				pos.x -= physicsTickTime * speed;
-				break;
-		}
-	}
-	turnedThisTick = false;
+	else move(physicsTickTime * speed);
 }
 
 void Bike::turn(bool right) {
-	if (turnedThisTick) return;
 	direction = (direction + (right ? 1 : 3)) % 4;
 	walls.push_back(pos);
-	turnedThisTick = true;
 }
 

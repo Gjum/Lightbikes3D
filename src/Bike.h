@@ -3,10 +3,7 @@
 
 #include <vector>
 #include "Controller.h"
-
-struct Point {
-	float x, z;
-};
+#include "Collision.h"
 
 class Bike {
 	public:
@@ -23,12 +20,15 @@ class Bike {
 
 		bool isDying();
 		bool isDead();
+		Box getBikeBox();
+		Box getWallBox(int wallIndex);
 		bool collideWithBike(Bike *otherBike);
 		bool collideWithWalls(Bike *otherBike);
 		bool collideWithMapBorder();
 
 		void resetWalls();
 		void setColor(float r, float g, float b);
+		void move(float units);
 		void onPhysicsTick();
 		void turn(bool right);
 
