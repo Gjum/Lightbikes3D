@@ -189,10 +189,28 @@ void Player::drawFloorAndBorders() {
 	// floor
 	glColor3f(0.2, 0.2, 0.2);
 
-	glVertex3f(       0, 0, 0);
-	glVertex3f(       0, 0, mapSizeZ);
-	glVertex3f(mapSizeX, 0, mapSizeZ);
-	glVertex3f(mapSizeX, 0, 0);
+	glVertex3f(       0, -0.0001, 0);
+	glVertex3f(       0, -0.0001, mapSizeZ);
+	glVertex3f(mapSizeX, -0.0001, mapSizeZ);
+	glVertex3f(mapSizeX, -0.0001, 0);
+
+	// grid
+	float w = wallRadius*2;
+	glColor3f(0.3, 0.3, 0.3);
+
+	for (int i = 0; i < mapSizeX; i += 2) {
+		glVertex3f(  i, 0, 0);
+		glVertex3f(w+i, 0, 0);
+		glVertex3f(w+i, 0, mapSizeZ);
+		glVertex3f(  i, 0, mapSizeZ);
+	}
+
+	for (int i = 0; i < mapSizeZ; i += 2) {
+		glVertex3f(       0, 0,   i);
+		glVertex3f(       0, 0, w+i);
+		glVertex3f(mapSizeX, 0, w+i);
+		glVertex3f(mapSizeX, 0,   i);
+	}
 
 	// borders
 	glColor3f(0.3, 0.3, 0.3);
